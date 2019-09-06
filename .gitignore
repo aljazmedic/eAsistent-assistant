@@ -3,6 +3,7 @@ private/*
 temp/*
 
 !private/.gitkeep
+!temp/.gitkeep
 
 #pycharm
 .idea/
