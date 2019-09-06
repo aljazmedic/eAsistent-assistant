@@ -2,6 +2,8 @@
 private/*
 temp/*
 
+!private/.gitkeep
+
 #pycharm
 .idea/
 
