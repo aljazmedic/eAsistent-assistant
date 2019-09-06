@@ -6,7 +6,7 @@ import pytz
 import event_formatter as ef
 import google_calendar_connection as gc
 from arguments import arg_init
-from eassistant_connection import init_session
+from eassistant_connection import EAsistentSession as EASession
 from misc import *
 
 
@@ -36,7 +36,7 @@ def get_school_events(sess, **delta_time):
 	return time_table_object
 
 
-def add_school_events_to_calendar(google_cal_service, session, calendarId, *args, **kwargs):
+def add_school_events_to_calendar(google_cal_service, session, calendar_id, *args, **kwargs):
 	# TODO add time boundary, add notify on special, make sure to prune all events before adding new ones
 	sch_events = get_school_events(session, *args, **kwargs)
 
@@ -51,41 +51,38 @@ def add_school_events_to_calendar(google_cal_service, session, calendarId, *args
 
 	time_min, time_max = fm(sch_events["time_boundary"]["min"], sch_events["time_boundary"]["max"], zone=local_tz)
 	print(time_min, time_max)
-	listed_events = google_cal_service.events().list(calendarId=calendarId, timeZone=local_tz.zone,
-	                                                 q="#school").execute()
+	listed_events = google_cal_service.events().list(calendarId=calendar_id, timeZone=local_tz.zone,
+														q="#school").execute()
 	for e in listed_events.get("items", []):
-		print(e["start"].get("dateTime", e["start"].get("date", "")), e["summary"], e["description"], "\n", sep
-
-		="\n")
+		print(e["start"].get("dateTime", e["start"].get("date", "")), e["summary"], e["description"], "\n", sep="\n")
 
 	L = len(sch_events["events"])
 	for i, e in enumerate(sch_events["events"]):
 		body = ef.google_event_body_from_parsed_event(e)
-		google_cal_service.events().insert(calendarId=calendarId, body=body).execute()
+		google_cal_service.events().insert(calendarId=calendar_id, body=body).execute()
 		progress_line(i + 1, L, "events processed!")
 		sleep(1)
 
 
 def main(arg_object):
-	with requests.Session() as s:
-		if arg_object.prune_temp:
-			clear_dir("./temp")
+	s = EASession()
+	if arg_object.prune_temp:
+		clear_dir("./temp")
 
-		work_calendar_name = arg_object.cal_name
+	work_calendar_name = arg_object.cal_name
 
-		init_session(s)
-		introduce(s)
-		CAL = gc.get_authenticated_service()
-		if arg_object.rm_cal:
-			gc.remove_calendar(CAL, name=work_calendar_name)
+	introduce(s)
+	CAL = gc.get_authenticated_service()
+	if arg_object.rm_cal:
+		gc.remove_calendar(CAL, name=work_calendar_name)
 
-		calendar_id = gc.assure_calendar(CAL, work_calendar_name)["id"]
-		add_school_events_to_calendar(CAL, s, calendar_id)
+	calendar_id = gc.assure_calendar(CAL, work_calendar_name)["id"]
+	add_school_events_to_calendar(CAL, s, calendar_id)
 
 
 if __name__ == '__main__':
 	ar = arg_init()
 	logger = logging.getLogger(__name__)
 	logging.basicConfig(level=logging.INFO, datefmt='%d-%b%H:%M:%S',
-	                    format='\r%(asctime)-15s (%(relativeCreated)-8d ms) - %(message)s')
+							format='\r%(asctime)-15s (%(relativeCreated)-8d ms) - %(message)s')
 	main(ar)
