@@ -16,7 +16,7 @@ def get_request_date_boundary(start_date: datetime.date = datetime.date.today(),
 
 	if not end_date:
 		end_date = start_date + datetime.timedelta(days=1)
-		while end_date.weekday() >= 5:
+		while end_date.weekday() != 4:
 			end_date += datetime.timedelta(days=1)
 
 	return {"from": start_date.strftime("%Y-%m-%d"),
