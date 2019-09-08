@@ -12,15 +12,23 @@ def update_date(google_cal_service: GoogleCalendarService, ea_service: EAssistan
 	if len(dates_to_update) == 1:
 		dates_to_update.append(dates_to_update[0])
 	eas_events = ea_service.get_school_events(dates_to_update[0], dates_to_update[1]+datetime.timedelta(days=1))
-	for date_to_update in dates_to_update:
-		time_min, time_max = gstrptime(eas_events["time_boundary"]["min"]), gstrptime(eas_events["time_boundary"]["max"])
-		print(time_min, time_max)
-		events = eas_events.get("events", [])
-		# TODO add time boundary, add notify on special, make sure to prune all events before adding new ones, predict meal time
-		for i, e in enumerate(events):
-			logging.info(f"{date_to_update}, event {i}.")
+	# for date_to_update in dates_to_update:
 
-			body = ef.google_event_body_from_parsed_event(e)
-			google_cal_service.add_event(body)
-			sleep(1)
+	if len(eas_events["events"]) == 0:
+		return
 
+	print(eas_events["time_boundary"])
+
+	time_min, time_max = gstrptime(eas_events["time_boundary"]["min"]), gstrptime(eas_events["time_boundary"]["max"])
+	print(time_min, time_max)
+	events = eas_events.get("events", [])
+	num_events = len(events)
+	# TODO add time boundary, add notify on special, make sure to prune all events before adding new ones, predict meal time
+	for i, e in enumerate(events, start=1):
+		logging.info(f"event {i}/{num_events} ({i*100.0/num_events}%).") # {date_to_update},
+
+		body = ef.google_event_body_from_parsed_event(e)
+		if not body:
+			continue
+		google_cal_service.add_event(body)
+		sleep(1)

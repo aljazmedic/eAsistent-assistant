@@ -17,14 +17,14 @@ def main(arg_object):
 
 	eas: EAssistantService = EAssistantService()
 	gcs: GoogleCalendarService = GoogleCalendarService(CALENDAR_NAME,
-	                                {
-		                                  "foregroundColor": "#ECD032",
-		                                  "description": "School calendar assistant calendar for subjects, exams, meals and more!",
-		                                  "backgroundColor": "#ECD032",
-		                                  "timeZone": "Europe/Belgrade",
-		                                  "summary": CALENDAR_NAME
-	                                  },
-	                            remove_if_exists=arg_object.rm_cal)
+	                                                   {
+		                                                   "foregroundColor": "#ECD032",
+		                                                   "description": "School calendar assistant calendar for subjects, exams, meals and more!",
+		                                                   "backgroundColor": "#ECD032",
+		                                                   "timeZone": "Europe/Belgrade",
+		                                                   "summary": CALENDAR_NAME
+	                                                   },
+	                                                   remove_if_exists=arg_object.rm_cal)
 
 	eas.introduce()
 	"""
@@ -34,17 +34,15 @@ def main(arg_object):
 		print(e["start"].get("dateTime", e["start"].get("date", "")), e["summary"], e["description"], sep="\n")
 	"""
 
-	eh.update_date(gcs, eas, datetime.date.today()+datetime.timedelta(days=1), datetime.date.today()+datetime.timedelta(days=8))
-
-
-	# sch_events = eas.get_school_events(datetime.datetime.today()+datetime.timedelta(days=1))
-	# eh.add_school_events_to_calendar(gcs, sch_events)
+	eh.update_date(gcs, eas,
+	               datetime.date(2019,  10, 26),
+	               datetime.date(2019, 11, 6))
 
 
 if __name__ == '__main__':
 	ar = arg_init()
 	logger = logging.getLogger(__name__)
 	logging.basicConfig(level=logging.INFO, datefmt='%d-%b%H:%M:%S',
-							format='\r%(asctime)-15s (%(relativeCreated)-8d ms) - %(message)s')
+	                    format='\r%(asctime)-15s (%(relativeCreated)-8d ms) - %(message)s')
 
 	main(ar)

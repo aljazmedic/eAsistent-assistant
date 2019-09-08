@@ -10,7 +10,11 @@ def hash_event(e):
 		N = 2
 	else:
 		N = 3
-	return f'id:{N}{(e.get("subject", e.get("name")).lower().replace("č", "c").replace("š", "s").replace("ž","z") + "___")[:3]}{extract_HHMM(e["start"]["dateTime"])}{extract_HHMM(e["end"]["dateTime"])}'
+	if "dateTime" in e["start"]:
+		hhmm = f"{extract_HHMM(e['start']['dateTime'])}{extract_HHMM(e['end']['dateTime'])}"
+	else:
+		hhmm = f"{e['start']['date']}"
+	return f'id:{N}{(e.get("subject", e.get("name")).lower().replace("č", "c").replace("š", "s").replace("ž","z") + "___")[:3]}{hhmm}'
 
 
 def str_to_colorId(input_str: str, range_n: int = 11, color_string=False) -> int:
@@ -21,8 +25,10 @@ def str_to_colorId(input_str: str, range_n: int = 11, color_string=False) -> int
 		sum_of_ascii += ord(c)
 	return int(sum_of_ascii * 101 + 37) % range_n
 
-
+# TODO take whole day events and connect them
 def google_event_body_from_parsed_event(e: dict)-> dict:
+	if e is {}:
+		return {}
 	global COLORMAP
 	if e["type"] == "school_hour":
 		description = [
@@ -63,7 +69,7 @@ def google_event_body_from_parsed_event(e: dict)-> dict:
 			"start": e["start"],
 			"end": e["end"],
 			"description": "\n".join(description),
-			"colorId": str_to_colorId(str(hash(["start"]))+e["type"])
+			"colorId": str_to_colorId(e["type"])
 		}
 	else:  # e["type"] == "all_day_event"
 		description = [
@@ -84,7 +90,7 @@ def google_event_body_from_parsed_event(e: dict)-> dict:
 			"start": e["start"],
 			"end": e["end"],
 			"description": "\n".join(description),
-			"colorId": str_to_colorId(str(hash(["start"]))+e["type"])
+			"colorId": str_to_colorId(e["type"])
 		}
 	return BODY
 
