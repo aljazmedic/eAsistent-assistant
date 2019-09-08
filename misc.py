@@ -1,10 +1,15 @@
 import datetime
 import json
 import os
-import requests
 import shutil
 
 import iso8601
+import logging
+import pytz
+import requests
+import tzlocal
+from typing import Union
+DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 
 def ask_for(session, method, url, counter=0, **kwargs):
@@ -31,8 +36,23 @@ def clear_dir(folder):
 			print(e)
 
 
-def gstrftime(dt):
-	s = dt.isoformat("T")
+def gstrftime(dt, tz_force=None, separated_tz=False):
+	print(dt, end=" ")
+	# FORMAT: 2002-10-02T15:00:00Z
+	if type(dt) == datetime.date:  # Is only a date
+		dt = datetime.datetime.combine(dt, datetime.datetime.min.time())
+
+	if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:  # has no timezone awareness
+		pytz.timezone(DEFAULT_TIMEZONE).localize(dt.replace(tzinfo=None))
+	if tz_force:
+		if type(tz_force) == str:
+			tz_force = pytz.timezone(tz_force)
+		dt = tz_force.localize(dt.replace(tzinfo=None))
+	if separated_tz:
+		s = dt.strftime("%Y-%m-%dT%H:%M:%S")
+	else:
+		s = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
+	print("->", s)
 	return s
 
 
@@ -51,7 +71,13 @@ def tmp_save(txt, name, end="json"):
 			wf.flush()
 
 
-def progress_line(i, L, text, tab=30):
-	n = int(((i + 1) / L) * tab)
-	print("\r[", "=" * n, ">", " " * (tab - n - 1), "] ", i, " of ", L, " %s (%2.1f %%)" % (text, 100.0 * ((i) / L)),
-	      sep="", end="")
+def progress_line(i, len_of_array, text, tab=30):
+	n = int(((i + 1) / len_of_array) * tab)
+	print("\r[", "=" * n, ">", " " * (tab - n - 1), "] ", i, " of ", len_of_array, " %s (%2.1f %%)" % (text, 100.0 * (i / len_of_array)), sep="", end="")
+
+
+if __name__ == '__main__':
+	logging.debug("Misc testing")
+	print(gstrftime(datetime.datetime.now(), tz_force=tzlocal.get_localzone()))
+	print(gstrftime(datetime.datetime.now().astimezone(tzlocal.get_localzone())))
+

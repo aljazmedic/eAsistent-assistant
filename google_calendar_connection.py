@@ -1,81 +1,113 @@
-import os
 import pickle
 import pprint
 
-import pytz
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-GMT_OFF = pytz.utc
-
-# The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
-# the OAuth 2.0 information for this application, including its client_id and
-# client_secret.
-CLIENT_SECRETS_FILE = "private/client_secret.json"
-CREDENTIALS_FILE = "private/google_oauth2client_credentials.pickle"
-
-# This access scope grants read-only access to the authenticated user's Drive
-# account.
-SCOPES = 'https://www.googleapis.com/auth/calendar'
-API_SERVICE_NAME = 'calendar'
-API_VERSION = 'v3'
+from misc import *
 
 
-def get_authenticated_service():
-	credentials_ = None
-	if os.path.exists(CREDENTIALS_FILE):
-		with open(CREDENTIALS_FILE, "rb") as rf:
-			credentials_ = pickle.load(rf)
+class GoogleCalendarService:
+	def __init__(self, calendar_name: str, body: dict = None, remove_if_exists: bool = False, timezone="Europe/Belgrade"):
+		self.working_calendar = ""
+		self.calendar_id = ""
 
-	if not credentials_ or not credentials_.valid:
-		if credentials_ and credentials_.expired and credentials_.refresh_token:
-			credentials_.refresh(Request())
-		else:
-			flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
-			credentials_ = flow.run_console()
-		with open(CREDENTIALS_FILE, "wb") as wf:
-			pickle.dump(credentials_, wf)
+		self.GMT_OFF = pytz.timezone(timezone)
 
-	return build(API_SERVICE_NAME, API_VERSION, credentials=credentials_)
+		# The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
+		# the OAuth 2.0 information for this application, including its client_id and
+		# client_secret.
+		CLIENT_SECRETS_FILE = "private/client_secret.json"
+		CREDENTIALS_FILE = "private/google_oauth2client_credentials.pickle"
 
+		# This access scope grants read-only access to the authenticated user's Drive
+		# account.
+		SCOPES = 'https://www.googleapis.com/auth/calendar'
+		API_SERVICE_NAME = 'calendar'
+		API_VERSION = 'v3'
 
-def find_calendar_by_name(service, name: str, exactly_one=False) -> list:
-	r = []
-	results = service.calendarList().list().execute()  # Get all the calendars
-	for calendar in results.get("items", []):
-		if calendar["summary"] == name:
-			if exactly_one:
-				return calendar
-			r.append(calendar)
-	return r
+		credentials_ = None
+		if os.path.exists(CREDENTIALS_FILE):
+			with open(CREDENTIALS_FILE, "rb") as rf:
+				credentials_ = pickle.load(rf)
 
+		if not credentials_ or not credentials_.valid:
+			if credentials_ and credentials_.expired and credentials_.refresh_token:
+				credentials_.refresh(Request())
+			else:
+				flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+				credentials_ = flow.run_console()
+			with open(CREDENTIALS_FILE, "wb") as wf:
+				pickle.dump(credentials_, wf)
 
-def assure_calendar(service, name: str, body={}):
-	if not body:
-		body = {
-			"foregroundColor": "#ECD032",
-		#  The foreground color of the calendar in the hexadecimal format "#ffffff". This property supersedes the index-based colorId property. To set or change this property, you need to specify colorRgbFormat=true in the parameters of the insert, update and patch methods. Optional.
-			"description": "School calendar assistant calendar for subjects, exams, meals and more!",
-		#  Description of the calendar. Optional. Read-only.
-			"backgroundColor": "#ECD032",
-		#  The main color of the calendar in the hexadecimal format "#0088aa". This property supersedes the index-based colorId property. To set or change this property, you need to specify colorRgbFormat=true in the parameters of the insert, update and patch methods. Optional.
-			"timeZone": "Europe/Belgrade",  # The time zone of the calendar. Optional. Read-only.
-			"summary": name
-		}
+		self.service = build(API_SERVICE_NAME, API_VERSION, credentials=credentials_)
 
-	results = service.calendarList().list().execute()  # Get all the calendars
-	for calendar in results["items"]:  # Find the corresponding calendar
-		if calendar["summary"] == name:
-			service.calendars().patch(calendarId=calendar["id"], body=body).execute()  # Patch it
-			return service.calendars().get(calendarId=calendar["id"]).execute()  # Return it
-	return service.calendars().insert(body=body).execute()  # Create it
+		if remove_if_exists:
+			rem_cal = self.find_calendar_by_name(calendar_name, exactly_one=True)
+			if rem_cal:
+				self.remove_calendar(rem_cal["id"])
 
+		self.working_calendar = self.hook_calendar(calendar_name, body)
+		self.calendar_id = self.working_calendar["id"]
+		logging.debug(f"Connected to {self.calendar_id}")
 
-def remove_calendar(service, calendar_id=None, name=None):
-	if name:
-		calendar_id = assure_calendar(service, name)["id"]
-	return service.calendars().delete(calendarId=calendar_id).execute()
+	def find_calendar_by_name(self, name: str, exactly_one=False) -> Union[list, dict]:
+		r = []
+		results = self.service.calendarList().list().execute()  # Get all the calendars
+		for calendar in results.get("items", []):
+			if calendar["summary"] == name:
+				if exactly_one:
+					return calendar
+				r.append(calendar)
+		return r
+
+	def hook_calendar(self, name: object, body: object) -> dict:
+		"""
+		:param name: calendars name
+		:param body: body structure
+		(https://developers.google.com/resources/api-libraries/documentation/calendar/v3/python/latest/calendar_v3.calendarList.html#insert)
+		:return: created calendars dict
+		"""
+		if not body:
+			body = {
+				"description": "",
+				"timeZone": "Europe/Belgrade",
+				"summary": name
+			}
+		results = self.service.calendarList().list().execute()  # Get all the calendars
+		for calendar in results.get("items", []):  # Find the corresponding calendar
+			if calendar["summary"] == name:
+				self.service.calendars().patch(calendarId=calendar["id"], body=body).execute()  # Patch it
+				return self.service.calendars().get(calendarId=calendar["id"]).execute()  # Return it
+		self.working_calendar = self.service.calendars().insert(body=body).execute()  # Create it
+		self.calendar_id = self.working_calendar["id"]
+		return self.working_calendar
+
+	def remove_calendar(self, calendar_id=None, name=None) -> None:
+		"""
+		:param calendar_id: identifier string of a calendar
+		:param name: name of the calendar
+		:return:
+		"""
+		if name:
+			calendar = self.find_calendar_by_name(name, exactly_one=True)
+			if not calendar:
+				return None
+			calendar_id = calendar["id"]
+		return self.service.calendars().delete(calendarId=calendar_id).execute()
+
+	def get_events_between(self, time_tuple: tuple, **list_args) -> dict:
+		"""
+		:param time_tuple: time boundary of min and max time
+		:param list_args: q="*", ...
+		"""
+		time_min, time_max = [gstrftime(x, tz_force=self.GMT_OFF) for x in time_tuple]
+		return self.service.events().list(calendarId=self.calendar_id, timeZone=self.GMT_OFF,
+		                                  timeMin=time_min, timeMax=time_max, **list_args).execute()
+
+	def add_event(self, event_body: dict) -> dict:
+		return self.service.events().insert(calendarId=self.calendar_id, body=event_body).execute()
 
 
 if __name__ == '__main__':
@@ -84,6 +116,7 @@ if __name__ == '__main__':
 	# os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 	pp = pprint.PrettyPrinter(indent=2)
-	CAL = get_authenticated_service()
+	gcs = GoogleCalendarService("School2")
 
-	pp.pprint(assure_calendar(CAL, "School2"))
+	pp.pprint(gcs.get_events_between((datetime.datetime.now().date() + datetime.timedelta(days=3),
+	                                  datetime.datetime.now().date() + datetime.timedelta(days=4)), q="#school")["items"])

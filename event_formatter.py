@@ -1,5 +1,7 @@
 import datetime
 
+COLORMAP = {}
+
 
 def hash_event(e):
 	if e["type"] == "school_hour":
@@ -8,10 +10,20 @@ def hash_event(e):
 		N = 2
 	else:
 		N = 3
-	return f'#id:{N}{(e.get("subject", e.get("name")).lower().replace("č", "c").replace("š", "s").replace("ž", "z")+"___")[:3]}{extract_HHMM(e["start"]["dateTime"])}{extract_HHMM(e["end"]["dateTime"])}'
+	return f'id:{N}{(e.get("subject", e.get("name")).lower().replace("č", "c").replace("š", "s").replace("ž","z") + "___")[:3]}{extract_HHMM(e["start"]["dateTime"])}{extract_HHMM(e["end"]["dateTime"])}'
 
 
-def google_event_body_from_parsed_event(e):
+def str_to_colorId(input_str: str, range_n: int = 11, color_string=False) -> int:
+	if color_string:
+		return int(input_str[1]+input_str[3], 16)%range_n
+	sum_of_ascii = 0
+	for c in input_str:
+		sum_of_ascii += ord(c)
+	return int(sum_of_ascii * 101 + 37) % range_n
+
+
+def google_event_body_from_parsed_event(e: dict)-> dict:
+	global COLORMAP
 	if e["type"] == "school_hour":
 		description = [
 			f'Speciality: {e.get("special", "None")}',
@@ -27,11 +39,11 @@ def google_event_body_from_parsed_event(e):
 		if e.get("classroom", None) or abbr_teachers:
 			summary += " " + addition
 		BODY = {
-			"summary":summary,
-			"start":e["start"],
-			"end":e["end"],
-			"description":("\n".join(description)).strip(),
-			"backgroundColor": e["color"]
+			"summary": summary,
+			"start": e["start"],
+			"end": e["end"],
+			"description": ("\n".join(description)).strip(),
+			"colorId": COLORMAP[e["color"]]
 		}
 	elif e["type"] == "event":
 		description = [
@@ -47,13 +59,13 @@ def google_event_body_from_parsed_event(e):
 		if e.get("location", None) or abbr_teachers:
 			summary += " " + addition
 		BODY = {
-			"summary":summary,
-			"start":e["start"],
-			"end":e["end"],
-			"description":"\n".join(description),
-			"backgroundColor":"#4EEBB9"
+			"summary": summary,
+			"start": e["start"],
+			"end": e["end"],
+			"description": "\n".join(description),
+			"colorId": str_to_colorId(str(hash(["start"]))+e["type"])
 		}
-	elif e["type"] == "all_day_event":
+	else:  # e["type"] == "all_day_event"
 		description = [
 			f'Location: {e["location"]}',
 			f'Teachers: {", ".join(e["teachers"])}',
@@ -68,11 +80,11 @@ def google_event_body_from_parsed_event(e):
 		if e.get("location", None) or abbr_teachers:
 			summary += " " + addition
 		BODY = {
-			"summary":summary,
-			"start":e["start"],
-			"end":e["end"],
-			"description":"\n".join(description),
-			"backgroundColor":"#4EEBB9"
+			"summary": summary,
+			"start": e["start"],
+			"end": e["end"],
+			"description": "\n".join(description),
+			"colorId": str_to_colorId(str(hash(["start"]))+e["type"])
 		}
 	return BODY
 
@@ -80,22 +92,23 @@ def google_event_body_from_parsed_event(e):
 """ HASH : [1|2|3]XXXSSSSEEEE
 	1,2,3 event type
 	XXX subj
-	SSSS satart HHMM
+	SSSS start HHMM
 	EEEE end HHMM
 """
 
 
 def extract_HHMM(iso_formatted_string):
-	return iso_formatted_string[11:13]+iso_formatted_string[14:16]
+	return iso_formatted_string[11:13] + iso_formatted_string[14:16]
 
 
 def to_timetable(table):
-
 	TIMEZONE = 'Europe/Belgrade'
+	all_the_colors = set()
+
 	def date_cmp(f, d1, d2, fmt="%Y-%m-%dT%H:%M:%S"):
-		if d1 == None and d2:
+		if d1 is None and d2:
 			return d2
-		elif d2 == None and d1:
+		elif d2 is None and d1:
 			return d1
 		elif d2 and d1:
 			dt1 = datetime.datetime.strptime(d1, fmt)
@@ -104,24 +117,24 @@ def to_timetable(table):
 		return None
 
 	# instantiate translation dict (id -> data)
-	translation_dict = {"time":{}, "date":{}}
-	time_boundary = {"min":None, "max":None}
+	translation_dict = {"time": {}, "date": {}}
+	time_boundary = {"min": None, "max": None}
 	for e in table["time_table"]:
 		key = str(e["id"])
 		translation_dict["time"][key] = {
-			"name":e["name_short"],
-			"time":{
-				"from":datetime.datetime.strptime(e["time"]["from"],"%H:%M").time().isoformat(),
-				"to":datetime.datetime.strptime(e["time"]["to"],"%H:%M").time().isoformat()
+			"name": e["name_short"],
+			"time": {
+				"from": datetime.datetime.strptime(e["time"]["from"], "%H:%M").time().isoformat(),
+				"to": datetime.datetime.strptime(e["time"]["to"], "%H:%M").time().isoformat()
 			}
 		}
 
 	for e in table["day_table"]:
 		dtime = datetime.datetime.strptime(e["date"], "%Y-%m-%d").date()
 		translation_dict["date"][dtime.isoformat()] = {
-			"name":e["name"],
-			"name_short":e["short_name"],
-			"date":dtime.isoformat()
+			"name": e["name"],
+			"name_short": e["short_name"],
+			"date": dtime.isoformat()
 		}
 
 	events = []
@@ -130,23 +143,23 @@ def to_timetable(table):
 		time_to_e = translation_dict["time"][str(entry["time"]["to_id"])]
 		date_e = translation_dict["date"][str(entry["time"]["date"])]
 		e = {
-			"start":{'timeZone': TIMEZONE},
-			"end":{'timeZone': TIMEZONE},
-			"names":{
-				"day_name":date_e["name"],
+			"start": {'timeZone': TIMEZONE},
+			"end": {'timeZone': TIMEZONE},
+			"names": {
+				"day_name": date_e["name"],
 				"hour_name_from": time_from_e["name"],
 				"hour_name_to": time_to_e["name"]
 			},
-			"type":"school_hour",
-			"completed":entry["completed"],
-			"subject":entry["subject"]["name"],
-			"special":entry["hour_special_type"],
-			"classroom":entry["classroom"]["name"],
-			"teachers":[x["name"] for x in entry["teachers"]],
-			"departments":[x["name"] for x in entry["departments"]],
+			"type": "school_hour",
+			"completed": entry["completed"],
+			"subject": entry["subject"]["name"],
+			"special": entry["hour_special_type"],
+			"classroom": entry["classroom"]["name"],
+			"teachers": [x["name"] for x in entry["teachers"]],
+			"departments": [x["name"] for x in entry["departments"]],
 			"groups": entry["groups"],
 			"info": entry["info"],
-			"color":entry["color"]
+			"color": entry["color"]
 		}
 		e["start"]["dateTime"] = date_e["date"] + 'T' + time_from_e["time"]["from"]
 		e["end"]["dateTime"] = date_e["date"] + 'T' + time_to_e["time"]["to"]
@@ -154,8 +167,8 @@ def to_timetable(table):
 		time_boundary["min"] = date_cmp(min, time_boundary["min"], e["start"]["dateTime"])
 		time_boundary["max"] = date_cmp(max, time_boundary["max"], e["end"]["dateTime"])
 
-
 		e["hash"] = hash_event(e)
+		all_the_colors.add(e["color"])  # Add Color for color mapping to Google's 11 color combinations
 		events.append(e)
 
 	for entry in table["events"]:
@@ -163,22 +176,22 @@ def to_timetable(table):
 		time_to = datetime.datetime.strptime(entry["time"]["to"], "%H:%M").time().isoformat()
 		date_e = translation_dict["date"][str(entry["date"])]
 		e = {
-			"start":{'timeZone': TIMEZONE},
-			"end":{'timeZone': TIMEZONE},
-			"names":{
-				"day_name":date_e["name"]
+			"start": {'timeZone': TIMEZONE},
+			"end": {'timeZone': TIMEZONE},
+			"names": {
+				"day_name": date_e["name"]
 			},
-			"time":{
-				"day_name":date_e["name"]
+			"time": {
+				"day_name": date_e["name"]
 			},
-			"type":"event",
-			"name":entry["name"],
-			"location":entry["location"]["name"],
-			"teachers":[x["name"] for x in entry["teachers"]]
+			"type": "event",
+			"name": entry["name"],
+			"location": entry["location"]["name"],
+			"teachers": [x["name"] for x in entry["teachers"]]
 		}
 
 		e["start"]["dateTime"] = date_e["date"] + 'T' + time_from
-		e["end"]["dateTime"]= date_e["date"] + 'T' + time_to
+		e["end"]["dateTime"] = date_e["date"] + 'T' + time_to
 
 		time_boundary["min"] = date_cmp(min, time_boundary["min"], e["start"]["dateTime"])
 		time_boundary["max"] = date_cmp(max, time_boundary["max"], e["end"]["dateTime"])
@@ -189,25 +202,32 @@ def to_timetable(table):
 	for entry in table["all_day_events"]:
 		date_e = translation_dict["date"][str(entry["date"])]
 		e = {
-			"start":{'timeZone': TIMEZONE},
-			"end":{'timeZone': TIMEZONE},
-			"names":{
-				"day_name":date_e["name"]
+			"start": {'timeZone': TIMEZONE},
+			"end": {'timeZone': TIMEZONE},
+			"names": {
+				"day_name": date_e["name"]
 			},
-			"name":entry["name"],
-			"type":"all_day_event",
-			"event_type":entry["event_type"],
-			"location":entry["location"]["name"],
-			"teachers":[x["name"] for x in entry["teachers"]],
+			"name": entry["name"],
+			"type": "all_day_event",
+			"event_type": entry["event_type"],
+			"location": entry["location"]["name"],
+			"teachers": [x["name"] for x in entry["teachers"]],
 		}
 		e["start"]["date"] = date_e["date"]
 		e["end"]["date"] = date_e["date"]
 
-		time_boundary["min"] = date_cmp(min, time_boundary["min"], e["start"]["date"]+"T00:00:00")
-		time_boundary["max"] = date_cmp(max, time_boundary["max"], e["end"]["date"]+"T00:00:00")
+		time_boundary["min"] = date_cmp(min, time_boundary["min"], e["start"]["date"] + "T00:00:00")
+		time_boundary["max"] = date_cmp(max, time_boundary["max"], e["end"]["date"] + "T00:00:00")
 
 		e["hash"] = hash_event(e)
 		events.append(e)
 
 	time_boundary['timeZone'] = TIMEZONE
-	return {"translation":translation_dict, "time_boundary": time_boundary, "events":sorted(events, key=lambda x: x["start"].get("dateTime", x["start"].get("date")))}
+
+	# Translate all_the_colors to COLORMAP
+	global COLORMAP
+	for i, c in enumerate(all_the_colors, start=1):
+		COLORMAP[c] = i
+
+	return {"translation": translation_dict, "time_boundary": time_boundary,
+	        "events": sorted(events, key=lambda x: x["start"].get("dateTime", x["start"].get("date")))}
