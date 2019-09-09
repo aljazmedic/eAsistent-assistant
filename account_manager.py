@@ -8,17 +8,20 @@ from Crypto.Cipher import AES
 from pbkdf2 import PBKDF2
 
 
+#TODO Typing
 class AccountManager:
 	def __init__(self):
 		self.saltSeed = 'q34hregt346u57uz'  # MAKE THIS YOUR OWN RANDOM STRING
 
-		self.PASS_PHRASE_FILE = './private/secret.p'
-		self.SECRETS_DB_FILE = './private/secrets'
+		self.PASS_PHRASE_FILE = './private/easistent_login.p'
+		self.SECRETS_DB_FILE = './private/easistent_login'
 		self.PASS_PHRASE_SIZE = 64  # 512-bit passphrase
 		self.KEY_SIZE = 32  # 256-bit key
 		self.BLOCK_SIZE = 16  # 16-bit blocks
 		self.IV_SIZE = 16  # 128-bits to initialise
 		self.SALT_SIZE = 8  # 64-bits of salt
+
+		self.pass_phrase = ""
 
 		# Setup
 		try:
@@ -31,8 +34,8 @@ class AccountManager:
 		except IOError:
 			logging.debug("Generating passphrase")
 			with open(self.PASS_PHRASE_FILE, 'wb') as f:
-				passphrase = os.urandom(self.PASS_PHRASE_SIZE)  # Random passphrase
-				f.write(base64.b64encode(passphrase))
+				self.pass_phrase = os.urandom(self.PASS_PHRASE_SIZE)  # Random passphrase
+				f.write(base64.b64encode(self.pass_phrase))
 				try:
 					os.remove(self.SECRETS_DB_FILE)  # If the passphrase has to be regenerated, then the old secrets file is irretrievable and should be removed
 				except FileNotFoundError:
@@ -49,7 +52,7 @@ class AccountManager:
 			if self.db == {}:
 				raise IOError
 		except (IOError, EOFError):
-			self.db = {}
+			self.db = {}  # start new db
 			with open(self.SECRETS_DB_FILE, 'wb') as f:
 				pickle.dump(self.db, f)
 
@@ -85,14 +88,21 @@ class AccountManager:
 
 		return cipher.decrypt(cipher_text).rstrip(b' ')  # Decrypt and depad
 
-	# ## User Functions ## #
-	def store(self, db_key:str, value: bytes):
-		''' Sore key-value pair safely and save to disk.'''
-		self.db[db_key] = self._encrypt(value, self._get_salt_for_key(db_key))
+	def _write_db(self):
 		with open(self.SECRETS_DB_FILE, 'wb') as f:
 			pickle.dump(self.db, f)
 
-	def retrieve(self, db_key, request_if_none=False):
+	# ## User Functions ## #
+	def store(self, db_key: str, value: bytes):
+		''' Sore key-value pair safely and save to disk.'''
+		self.db[db_key] = self._encrypt(value, self._get_salt_for_key(db_key))
+		self._write_db()
+
+	def remove(self, db_key: str):
+		del self.db[db_key]
+		self._write_db()
+
+	def retrieve(self, db_key: str, request_if_none=False):
 		''' Fetch key-value pair.'''
 		if db_key in self.db:
 			return str(self._decrypt(self.db.get(db_key), self._get_salt_for_key(db_key)), encoding='UTF-8')
@@ -101,13 +111,13 @@ class AccountManager:
 			return self.retrieve(db_key)
 		return None
 
-	def require(self, db_key):
+	def require(self, db_key: str):
 		logging.debug(f"Requiring {db_key}")
 		''' Test if key is stored, if not, prompt the user for it while hiding their input from shoulder-surfers.'''
 		if db_key not in self.db:
 			self.store(db_key, getpass(prompt=f'{db_key.title()}:').encode('UTF-8'))
 
-	def has_key(self, db_key):
+	def has_key(self, db_key: str):
 		return db_key in self.db
 
 	def get_keys(self):

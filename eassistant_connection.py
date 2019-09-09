@@ -30,6 +30,7 @@ class EAssistantService:
 		self.account_manager = AccountManager()
 		data = self._parse_user_data()
 		self.init_session(data)
+		self.introduce()
 
 	def _parse_user_data(self):
 		r = {
