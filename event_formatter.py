@@ -25,6 +25,7 @@ def str_to_colorId(input_str: str, range_n: int = 11, color_string=False) -> int
 		sum_of_ascii += ord(c)
 	return int(sum_of_ascii * 101 + 37) % range_n
 
+
 # TODO take whole day events and connect them
 def google_event_body_from_parsed_event(e: dict)-> dict:
 	if e is {}:
