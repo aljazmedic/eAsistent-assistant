@@ -1,11 +1,15 @@
+import pip._internal
 import pip
 
+
 def install_requirements():
-    pip.main(["install", "--user", "--upgrade", "pip==9.0.3"]) 
     if hasattr(pip, 'main'):
-        pip.main(['requirements.txt'])
+        pip.main(["install", "--user", "--upgrade", "pip==9.0.3"])
+        pip.main(['install', '-r', 'requirements.txt'])
     else:
-        pip._internal.main(['install', package])
+        pip._internal.main(["install", "--user", "--upgrade", "pip==9.0.3"])
+        pip._internal.main(['install', '-r', 'requirements.txt'])
+
 
 # Example
 if __name__ == '__main__':
