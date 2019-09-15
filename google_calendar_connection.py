@@ -1,5 +1,6 @@
 import pickle
 import pprint
+from time import sleep
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -103,12 +104,30 @@ class GoogleCalendarService:
 		:param list_args: q="*", ...
 		"""
 		time_min, time_max = [gstrftime(x, tz_force=self.GMT_OFF) for x in time_tuple]
+
 		return self.service.events().list(calendarId=self.calendar_id, timeZone=self.GMT_OFF,
 		                                  timeMin=time_min, timeMax=time_max, **list_args).execute()
 
 	def add_event(self, event_body: dict) -> dict:
-		return self.service.events().insert(calendarId=self.calendar_id, body=event_body).execute()
+		sleep(1)
+		try:
+			return self.service.events().insert(calendarId=self.calendar_id, body=event_body).execute()
+		except Exception as e:
+			logging.error("Error adding:\n"+str(event_body))
 
+	def update_event(self, event_id: str, event_body: dict, **patch_kwargs) -> dict:
+		sleep(1)
+		try:
+			return self.service.events().update(calendarId=self.calendar_id, eventId=event_id, body=event_body, **patch_kwargs)
+		except Exception as e:
+			logging.error("Error updating:\n"+str(event_body))
+
+	def remove_event(self, event_id: str, **remove_kwargs):
+		sleep(1)
+		try:
+			return self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs)
+		except Exception as e:
+			logging.error("Error removing")
 
 if __name__ == '__main__':
 	# When running locally, disable OAuthlib's HTTPs verification. When

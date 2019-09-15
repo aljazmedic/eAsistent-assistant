@@ -1,11 +1,9 @@
-import base64
-
 from bs4 import BeautifulSoup
 from requests import Session
 
-import event_formatter as ef
-from misc import *
 from account_manager import AccountManager
+from event_formatter import EventFormatter
+from misc import *
 
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
@@ -26,6 +24,8 @@ def get_request_date_boundary(start_date: datetime.date = datetime.date.today(),
 
 class EAssistantService:
 	def __init__(self):
+		self.ef = EventFormatter()
+
 		self.requests_session = None
 		self.account_manager = AccountManager()
 		data = self._parse_user_data()
@@ -91,6 +91,6 @@ class EAssistantService:
 		                       params=timetable_payload).json()
 		tmp_save(parsed_table, "timetable_parsed", "json")
 		# print(parsed_table)
-		time_table_object = ef.to_timetable(parsed_table)
+		time_table_object = self.ef.format_timetable_for_entry(parsed_table)
 		tmp_save(time_table_object, "timetable_formatted", "json")
 		return time_table_object
