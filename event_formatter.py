@@ -43,7 +43,8 @@ class EventFormatter:
 		with open("event_manager/COLORMAP.pickle", "wb") as CM_file:
 			pickle.dump(self.COLORMAP, CM_file)
 
-	def google_event_body_from_parsed_event(self, e: dict)-> dict:
+	def google_event_body_from_parsed_event(self, e: dict) -> (str, dict):
+		specialty = e.get("special", None)
 		if e["type"] == "school_hour":
 			description = [
 				f'Speciality: {e.get("special", "None")}',
@@ -106,7 +107,7 @@ class EventFormatter:
 				"description": "\n".join(description),
 				"colorId": str_to_colorId(str(hash(["start"]))+e["type"])
 			}
-		return BODY
+		return specialty, BODY
 
 	def format_timetable_for_entry(self, table):
 		self.TIMEZONE = 'Europe/Belgrade'

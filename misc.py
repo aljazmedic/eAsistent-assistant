@@ -37,7 +37,6 @@ def clear_dir(folder):
 
 
 def gstrftime(dt, tz_force=None, separated_tz=False):
-	print(dt, end=" ")
 	# FORMAT: 2002-10-02T15:00:00Z
 	if type(dt) == datetime.date:  # Is only a date
 		dt = datetime.datetime.combine(dt, datetime.datetime.min.time())
@@ -52,7 +51,7 @@ def gstrftime(dt, tz_force=None, separated_tz=False):
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S")
 	else:
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
-	print("->", s)
+	logging.debug("gstrftime:" + str(dt) + "->" + s)
 	return s
 
 

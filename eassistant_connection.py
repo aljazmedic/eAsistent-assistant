@@ -10,13 +10,11 @@ def get_request_date_boundary(start_date: datetime.date = datetime.date.today(),
 	# start_date += datetime.timedelta(days=1)
 
 	# Assure we don't parse for saturday or sunday
-	while start_date.weekday() >= 5:
-		start_date += datetime.timedelta(days=1)
+	start_date += datetime.timedelta(days=7-start_date.weekday())
 
 	if not end_date:
 		end_date = start_date + datetime.timedelta(days=1)
-		while end_date.weekday() >= 5:
-			end_date += datetime.timedelta(days=1)
+	end_date += datetime.timedelta(days=7-end_date.weekday())
 
 	return {"from": start_date.strftime("%Y-%m-%d"),
 	        "to":   end_date.  strftime("%Y-%m-%d")}
@@ -87,6 +85,7 @@ class EAssistantService:
 
 	def get_school_events(self, dt_begin: datetime.date = datetime.date.today(), dt_end: datetime.date = None):
 		timetable_payload = get_request_date_boundary(dt_begin, dt_end)
+		logging.debug("Easistent timetable payload: " + str(timetable_payload))
 		parsed_table = ask_for(self.requests_session, "GET", "https://www.easistent.com/m/timetable/weekly",
 		                       params=timetable_payload).json()
 		tmp_save(parsed_table, "timetable_parsed", "json")
