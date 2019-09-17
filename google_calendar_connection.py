@@ -8,6 +8,7 @@ from googleapiclient.discovery import build
 
 from misc import *
 
+logger = logging.getLogger(__name__)
 
 class GoogleCalendarService:
 	def __init__(self, calendar_name: str, body: dict = None, remove_if_exists: bool = False, timezone="Europe/Belgrade"):
@@ -51,7 +52,7 @@ class GoogleCalendarService:
 
 		self.working_calendar = self.hook_calendar(calendar_name, body)
 		self.calendar_id = self.working_calendar["id"]
-		logging.debug(f"Connected to {self.calendar_id}")
+		logger.debug(f"Connected to {self.calendar_id}")
 
 	def find_calendar_by_name(self, name: str, exactly_one=False) -> Union[list, dict]:
 		r = []
@@ -113,21 +114,21 @@ class GoogleCalendarService:
 		try:
 			return self.service.events().insert(calendarId=self.calendar_id, body=event_body).execute()
 		except Exception as e:
-			logging.error("Error adding:\n"+str(event_body))
+			logger.error("Error adding:\n"+str(event_body))
 
 	def update_event(self, event_id: str, event_body: dict, **patch_kwargs) -> dict:
 		sleep(1)
 		try:
 			return self.service.events().update(calendarId=self.calendar_id, eventId=event_id, body=event_body, **patch_kwargs).execute()
 		except Exception as e:
-			logging.error("Error updating:\n"+str(event_body))
+			logger.error("Error updating:\n"+str(event_body))
 
 	def remove_event(self, event_id: str, **remove_kwargs):
 		sleep(1)
 		try:
 			return self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs).execute()
 		except Exception as e:
-			logging.error("Error removing")
+			logger.error("Error removing")
 
 if __name__ == '__main__':
 	# When running locally, disable OAuthlib's HTTPs verification. When

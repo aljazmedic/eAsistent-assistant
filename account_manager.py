@@ -7,6 +7,7 @@ from getpass import getpass
 from Crypto.Cipher import AES
 from pbkdf2 import PBKDF2
 
+logger = logging.getLogger(__name__)
 
 #TODO Typing
 class AccountManager:
@@ -25,14 +26,14 @@ class AccountManager:
 
 		# Setup
 		try:
-			logging.debug(f"Reading {self.PASS_PHRASE_FILE}")
+			logger.debug(f"Reading {self.PASS_PHRASE_FILE}")
 			with open(self.PASS_PHRASE_FILE, 'rb') as f:
 				self.pass_phrase = f.read()  # .encode('UTF-8')
-				logging.debug(f" Loaded: {self.pass_phrase}")
+				logger.debug(f" Loaded: {self.pass_phrase}")
 			if len(self.pass_phrase) == 0:
 				raise IOError
 		except IOError:
-			logging.debug("Generating passphrase")
+			logger.debug("Generating passphrase")
 			with open(self.PASS_PHRASE_FILE, 'wb') as f:
 				self.pass_phrase = os.urandom(self.PASS_PHRASE_SIZE)  # Random passphrase
 				f.write(base64.b64encode(self.pass_phrase))
@@ -40,9 +41,9 @@ class AccountManager:
 					os.remove(self.SECRETS_DB_FILE)  # If the passphrase has to be regenerated, then the old secrets file is irretrievable and should be removed
 				except FileNotFoundError:
 					pass
-			logging.debug("Passphrase generated")
+			logger.debug("Passphrase generated")
 		else:
-			logging.debug(f"Decoding {self.pass_phrase}")
+			logger.debug(f"Decoding {self.pass_phrase}")
 			self.pass_phrase = base64.b64decode(self.pass_phrase)  # Decode if loaded from already extant file
 
 		# Load or create secrets database:
@@ -60,7 +61,7 @@ class AccountManager:
 		return PBKDF2(db_key, self.saltSeed).read(self.SALT_SIZE)  # Salt is generated as the hash of the key with it's own salt acting like a seed value
 
 	def _encrypt(self, plaintext, salt):
-		logging.debug("Encrypting")
+		logger.debug("Encrypting")
 		''' Pad plaintext, then encrypt it with a new, randomly initialised cipher. Will not preserve trailing whitespace in plaintext!'''
 
 		# Initialise Cipher Randomly
@@ -74,7 +75,7 @@ class AccountManager:
 		return initVector + cipher.encrypt(plaintext + b' '*(self.BLOCK_SIZE - (len(plaintext) % self.BLOCK_SIZE)))  # Pad and encrypt
 
 	def _decrypt(self, cipher_text, salt):
-		logging.debug("Decrypting")
+		logger.debug("Decrypting")
 		''' Reconstruct the cipher object and decrypt. Will not preserve trailing whitespace in the retrieved value!'''
 
 		# Prepare cipher key:
@@ -112,7 +113,7 @@ class AccountManager:
 		return None
 
 	def require(self, db_key: str):
-		logging.debug(f"Requiring {db_key}")
+		logger.debug(f"Requiring {db_key}")
 		''' Test if key is stored, if not, prompt the user for it while hiding their input from shoulder-surfers.'''
 		if db_key not in self.db:
 			self.store(db_key, getpass(prompt=f'{db_key.title()}:').encode('UTF-8'))
@@ -128,7 +129,7 @@ if __name__ == '__main__':
 	logging.basicConfig(level=logging.INFO)
 	### Setup ###
 	# Aquire passphrase:
-	logging.debug("Aquiring passphrase")
+	logger.debug("Aquiring passphrase")
 	am = AccountManager()
 	### Test (put your code here) ###
 	am.require('id')

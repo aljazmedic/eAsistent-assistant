@@ -1,5 +1,5 @@
 import event_handler as eh
-from arguments import arg_init
+from arguments import args_program_init
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
 from misc import *
@@ -40,7 +40,7 @@ def main(arg_object):
 
 
 if __name__ == '__main__':
-	ar = arg_init()
+	ar = args_program_init()
 	logger = logging.getLogger(__name__)
 	logging.basicConfig(level=logging.DEBUG, datefmt='%d-%b %H:%M:%S',
 							format='\r%(asctime)-15s|%(relativeCreated)-8d ms|%(levelname)-7s| - %(message)s')

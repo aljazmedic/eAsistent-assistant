@@ -4,7 +4,7 @@ from requests import Session
 from account_manager import AccountManager
 from event_formatter import EventFormatter
 from misc import *
-
+logger = logging.getLogger(__name__)
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
 	# start_date += datetime.timedelta(days=1)
@@ -44,7 +44,7 @@ class EAssistantService:
 
 	def init_session(self, user_data):
 		self.requests_session = Session()
-		logging.info("Initialization of session for eassistant.")
+		logger.info("Initialization of session for eassistant.")
 		# Initial get
 		login_url = "https://www.easistent.com/p/ajax_prijava"
 
@@ -53,7 +53,7 @@ class EAssistantService:
 		if post_request.status_code != 200 or len(post_json["errfields"]) != 0:
 			raise Exception(post_request, post_request.text)
 		for err in post_json.get('errfields', []):
-			logging.error(err)
+			logger.error(err)
 		redirect = post_json["data"]["prijava_redirect"]
 
 		get_request = self.requests_session.get(redirect)
@@ -76,16 +76,16 @@ class EAssistantService:
 			"X-Client-Platform": "web",
 			"X-Requested-With": "XMLHttpRequest"
 		})
-		logging.info("Session authenticated!")
+		logger.info("Session authenticated!")
 		return self
 
 	def introduce(self):
 		table = ask_for(self.requests_session, "GET", "https://www.easistent.com/m/me/child").json()
-		logging.info(f"Logged in as {table['display_name']} (ID:{table['id']}), age level: {table['age_level']}")
+		logger.info(f"Logged in as {table['display_name']} (ID:{table['id']}), age level: {table['age_level']}")
 
 	def get_school_events(self, dt_begin: datetime.date = datetime.date.today(), dt_end: datetime.date = None):
 		timetable_payload = get_request_date_boundary(dt_begin, dt_end)
-		logging.debug("Easistent timetable payload: " + str(timetable_payload))
+		logger.debug("Easistent timetable payload: " + str(timetable_payload))
 		parsed_table = ask_for(self.requests_session, "GET", "https://www.easistent.com/m/timetable/weekly",
 		                       params=timetable_payload).json()
 		tmp_save(parsed_table, "timetable_parsed", "json")

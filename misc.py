@@ -11,6 +11,7 @@ import tzlocal
 from typing import Union
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
+logger = logging.getLogger(__name__)
 
 def ask_for(session, method, url, counter=0, **kwargs):
 	r = session.send(session.prepare_request(requests.Request(method, url, **kwargs)))
@@ -51,7 +52,7 @@ def gstrftime(dt, tz_force=None, separated_tz=False):
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S")
 	else:
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
-	logging.debug("gstrftime:" + str(dt) + "->" + s)
+	logger.debug("gstrftime:" + str(dt) + "->" + s)
 	return s
 
 
@@ -76,7 +77,7 @@ def progress_line(i, len_of_array, text, tab=30):
 
 
 if __name__ == '__main__':
-	logging.debug("Misc testing")
+	logger.debug("Misc testing")
 	print(gstrftime(datetime.datetime.now(), tz_force=tzlocal.get_localzone()))
 	print(gstrftime(datetime.datetime.now().astimezone(tzlocal.get_localzone())))
 
