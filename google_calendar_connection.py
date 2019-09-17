@@ -118,14 +118,14 @@ class GoogleCalendarService:
 	def update_event(self, event_id: str, event_body: dict, **patch_kwargs) -> dict:
 		sleep(1)
 		try:
-			return self.service.events().update(calendarId=self.calendar_id, eventId=event_id, body=event_body, **patch_kwargs)
+			return self.service.events().update(calendarId=self.calendar_id, eventId=event_id, body=event_body, **patch_kwargs).execute()
 		except Exception as e:
 			logging.error("Error updating:\n"+str(event_body))
 
 	def remove_event(self, event_id: str, **remove_kwargs):
 		sleep(1)
 		try:
-			return self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs)
+			return self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs).execute()
 		except Exception as e:
 			logging.error("Error removing")
 
