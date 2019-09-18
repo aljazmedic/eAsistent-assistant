@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 
 import event_handler as eh
 from arguments import run_args_init
@@ -58,9 +59,13 @@ def main():
 
 	eas.introduce()
 
-	eh.update_date(gcs, eas,
-				   datetime.date.today() + datetime.timedelta(days=1),
-				   datetime.date(2019, 9, 27))
+	threadOne = threading.Thread(target=eh.update_date,
+								 args=(gcs, eas, datetime.date(2019, 9, 27)),
+								 daemon=True,
+								 name='update_thrd')
+
+	threadOne.start()
+	threadOne.join()
 
 
 if __name__ == '__main__':
