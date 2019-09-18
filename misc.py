@@ -8,10 +8,12 @@ import logging
 import pytz
 import requests
 import tzlocal
-from typing import Union
+
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
-logger = logging.getLogger(__name__)
+logger = logging.logger = logging.getLogger(__name__)
+
+
 
 def ask_for(session, method, url, counter=0, **kwargs):
 	r = session.send(session.prepare_request(requests.Request(method, url, **kwargs)))
@@ -25,6 +27,14 @@ def ask_for(session, method, url, counter=0, **kwargs):
 	return r
 
 
+def assure_dir(folder):
+	try:
+		if not os.path.exists(folder):
+			os.makedirs(folder)
+	except Exception as e:
+		logger.exception(e)
+
+
 def clear_dir(folder):
 	for the_file in os.listdir(folder):
 		file_path = os.path.join(folder, the_file)
@@ -34,7 +44,7 @@ def clear_dir(folder):
 			elif os.path.isdir(file_path):
 				shutil.rmtree(file_path)
 		except Exception as e:
-			print(e)
+			logger.exception(e)
 
 
 def gstrftime(dt, tz_force=None, separated_tz=False):

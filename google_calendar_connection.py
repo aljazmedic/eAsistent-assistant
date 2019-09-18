@@ -1,14 +1,19 @@
 import pickle
 import pprint
 from time import sleep
+from typing import Union
 
+import logging
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from misc import *
+from misc import gstrftime, os, datetime, pytz
 
-logger = logging.getLogger(__name__)
+logger = logging.logger = logging.getLogger(__name__)
+
+logger.debug("Loaded.")
+
 
 class GoogleCalendarService:
 	def __init__(self, calendar_name: str, body: dict = None, remove_if_exists: bool = False, timezone="Europe/Belgrade"):
@@ -129,6 +134,7 @@ class GoogleCalendarService:
 			return self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs).execute()
 		except Exception as e:
 			logger.error("Error removing")
+
 
 if __name__ == '__main__':
 	# When running locally, disable OAuthlib's HTTPs verification. When

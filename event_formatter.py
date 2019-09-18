@@ -1,7 +1,8 @@
 import datetime
 import pickle
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.logger = logging.getLogger(__name__)
+
 GOOGLE_EVENT_RANGE = 11
 
 

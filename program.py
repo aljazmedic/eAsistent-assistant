@@ -2,7 +2,9 @@ import event_handler as eh
 from arguments import args_program_init
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
-from misc import *
+from misc import clear_dir, datetime
+
+import logging
 
 CALENDAR_ID: str = ""
 CALENDAR_NAME: str = ""

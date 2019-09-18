@@ -3,18 +3,22 @@ from requests import Session
 
 from account_manager import AccountManager
 from event_formatter import EventFormatter
-from misc import *
-logger = logging.getLogger(__name__)
+from misc import tmp_save, ask_for, datetime
+import logging
+
+logger = logging.logger = logging.getLogger(__name__)
+
+
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
 	# start_date += datetime.timedelta(days=1)
 
 	# Assure we don't parse for saturday or sunday
-	start_date += datetime.timedelta(days=7-start_date.weekday())
+	start_date += datetime.timedelta(days=-start_date.weekday())  # set on monday that week
 
 	if not end_date:
 		end_date = start_date + datetime.timedelta(days=1)
-	end_date += datetime.timedelta(days=7-end_date.weekday())
+	end_date += datetime.timedelta(days=4-end_date.weekday())  # set on friday that week
 
 	return {"from": start_date.strftime("%Y-%m-%d"),
 	        "to":   end_date.  strftime("%Y-%m-%d")}
