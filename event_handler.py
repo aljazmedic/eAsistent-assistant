@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from time import sleep
 
 import event_formatter as ef

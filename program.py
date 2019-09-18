@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import event_handler as eh
 from arguments import arg_init
 from eassistant_connection import EAssistantService
