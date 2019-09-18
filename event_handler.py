@@ -1,9 +1,9 @@
+#!/usr/bin/python3
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
 from misc import gstrptime, datetime
 import logging
 logger = logging.logger = logging.getLogger(__name__)
-
 
 
 def get_event_start(e: dict) -> str:

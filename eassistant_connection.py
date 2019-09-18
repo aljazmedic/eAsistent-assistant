@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from bs4 import BeautifulSoup
 from requests import Session
 
@@ -7,7 +8,6 @@ from misc import tmp_save, ask_for, datetime
 import logging
 
 logger = logging.logger = logging.getLogger(__name__)
-
 
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
