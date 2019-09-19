@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 
 import event_handler as eh
 from arguments import run_args_init
@@ -8,9 +9,7 @@ from google_calendar_connection import GoogleCalendarService
 from misc import clear_dir, assure_dir, datetime
 
 logger = logging.getLogger()
-
-CALENDAR_ID: str = ""
-CALENDAR_NAME: str = ""
+THREADING_LOCKS = {}
 
 
 def main():
@@ -21,6 +20,7 @@ def main():
 		datefmt='%d-%b %H:%M:%S')
 	if args_parsed.verbose:
 		dbg_lvl = logging.DEBUG
+		print("Verbose mode:")
 	elif args_parsed.quiet:
 		dbg_lvl = logging.WARNING
 	else:
@@ -35,7 +35,7 @@ def main():
 	consoleHandler.setFormatter(logFormatter)
 	fileHandler.setFormatter(logFormatter)
 
-	global logger, CALENDAR_NAME, CALENDAR_ID
+	global logger
 	logger.setLevel(dbg_lvl)
 	logger.addHandler(consoleHandler)
 	logger.addHandler(fileHandler)
@@ -57,10 +57,24 @@ def main():
 													   remove_if_exists=args_parsed.rm_cal)
 
 	eas.introduce()
+	THREADING_LOCKS["google"] = threading.Lock()
+	THREADING_LOCKS["logging"] = threading.Lock()
+	threads = eh.update_dates(gcs,
+							  eas,
+							  datetime.date.today() + datetime.timedelta(days=1),
+							  datetime.date(2019, 9, 27),
+							  google_lock=THREADING_LOCKS["google"],
+							  logging_lock=THREADING_LOCKS["logging"])
 
-	eh.update_date(gcs, eas,
-				   datetime.date.today() + datetime.timedelta(days=1),
-				   datetime.date(2019, 9, 27))
+	for t in threads:
+		t.start()
+
+	# Do meal inquiry
+
+	while any([t.isAlive() for t in threads]):
+		for t in threads:
+			t.join(2.0)
+			# if it isn't alive anymore, update meal for that day
 
 
 if __name__ == '__main__':
