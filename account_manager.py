@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import base64
 import logging
 import os
@@ -5,6 +6,7 @@ import pickle
 from getpass import getpass
 
 from Crypto.Cipher import AES
+
 from pbkdf2 import PBKDF2
 
 logger = logging.logger = logging.getLogger(__name__)

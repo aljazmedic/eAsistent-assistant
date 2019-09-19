@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
 from misc import gstrptime, datetime
