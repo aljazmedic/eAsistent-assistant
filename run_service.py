@@ -22,6 +22,7 @@ def main():
 		datefmt='%d-%b %H:%M:%S')
 	if args_parsed.verbose:
 		dbg_lvl = logging.DEBUG
+		print("Verbose mode:")
 	elif args_parsed.quiet:
 		dbg_lvl = logging.WARNING
 	else:
@@ -59,13 +60,17 @@ def main():
 
 	eas.introduce()
 
-	threadOne = threading.Thread(target=eh.update_date,
-								 args=(gcs, eas, datetime.date(2019, 9, 27)),
-								 daemon=True,
-								 name='update_thrd')
+	threads = eh.update_dates(gcs,
+							  eas,
+							  datetime.date.today() + datetime.timedelta(days=1),
+							  datetime.date(2019, 9, 27),
+							  threaded=True)
 
-	threadOne.start()
-	threadOne.join()
+	for t in threads:
+		t.start()
+
+	for t in threads:
+		t.join(timeout=1)
 
 
 if __name__ == '__main__':
