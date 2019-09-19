@@ -63,7 +63,6 @@ def gstrftime(dt, tz_force=None, separated_tz=False):
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S")
 	else:
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
-	logger.debug("gstrftime:" + str(dt) + "->" + s)
 	return s
 
 

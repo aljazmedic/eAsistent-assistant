@@ -11,10 +11,13 @@ from googleapiclient.discovery import build
 
 from misc import gstrftime, os, datetime, pytz
 
-logger = logging.logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 logger.debug("Loaded.")
 
+# ignore majority of logs
+g_api_logger = logging.getLogger("googleapiclient")
+g_api_logger.setLevel(logging.CRITICAL)
 
 class GoogleCalendarService:
 	def __init__(self, calendar_name: str, body: dict = None, remove_if_exists: bool = False, timezone="Europe/Belgrade"):
@@ -120,21 +123,24 @@ class GoogleCalendarService:
 		try:
 			return self.service.events().insert(calendarId=self.calendar_id, body=event_body).execute()
 		except Exception as e:
-			logger.error("Error adding:\n"+str(event_body))
+			logger.debug("Error adding:\n"+str(event_body))
+			logger.error(e)
 
 	def update_event(self, event_id: str, event_body: dict, **patch_kwargs) -> dict:
 		sleep(1)
 		try:
 			return self.service.events().update(calendarId=self.calendar_id, eventId=event_id, body=event_body, **patch_kwargs).execute()
 		except Exception as e:
-			logger.error("Error updating:\n"+str(event_body))
+			logger.debug("Error updating:\n"+str(event_body))
+			logger.error(e)
 
 	def remove_event(self, event_id: str, **remove_kwargs):
 		sleep(1)
 		try:
 			return self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs).execute()
 		except Exception as e:
-			logger.error("Error removing")
+			logger.debug("Error removing")
+			logger.error(e)
 
 
 if __name__ == '__main__':

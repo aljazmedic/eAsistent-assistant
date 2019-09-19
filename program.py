@@ -37,9 +37,9 @@ def main(arg_object):
 		print(e["start"].get("dateTime", e["start"].get("date", "")), e["summary"], e["description"], sep="\n")
 	"""
 
-	eh.update_date(gcs, eas, datetime.date.today()+datetime.timedelta
-	(days=1), datetime.date.today()+datetime.timedelta(days=1),
-				   datetime.date(2019, 9, 27))
+	eh.update_dates(gcs, eas, datetime.date.today() + datetime.timedelta
+	(days=1), datetime.date.today() + datetime.timedelta(days=1),
+					datetime.date(2019, 9, 27))
 
 
 if __name__ == '__main__':

@@ -1,11 +1,14 @@
 #!/usr/bin/python3
 
+import json
+import logging
+import threading
+
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
 from misc import gstrptime, datetime
-import logging
-logger = logging.logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 
 def get_event_start(e: dict) -> str:
@@ -20,7 +23,51 @@ def events_start_at_same_time(e1: dict, e2: dict, no_timezone: bool = False) -> 
 	return s1 == s2
 
 
-def update_date(google_cal_service: GoogleCalendarService, ea_service: EAssistantService, *dates_to_update: datetime.date) -> None:
+def _update_single_date(google_cal_service: GoogleCalendarService, date_construct: dict, date: str, threading_lock: threading.Lock, google_lock: threading.Lock) -> None:
+	"""
+	:param google_cal_service:
+	:param ea_service:
+	:param date_construct: dictionary with entries for time
+	:param date:
+	:return:
+	"""
+	"""
+	"08:15:00":{
+		"easistent":[events],
+		"google":[events]
+	},
+	...
+	"""
+	with threading_lock:
+		logger.debug(f"Updating {date}")
+	for e_time, all_events in date_construct.items():
+		google_events = all_events.get("google", [])
+		easistent_events = all_events.get("easistent", [])
+
+		for g_ev, ea_ev in zip(google_events, easistent_events):
+			if ea_ev and g_ev:
+				# patch google event
+				with google_lock:
+					google_cal_service.update_event(event_id=g_ev["id"], event_body=ea_ev)
+				with threading_lock:
+					logger.debug(get_event_start(ea_ev) + " Patched.")
+			elif ea_ev and not g_ev:
+				# create google event from ea_ev
+				with google_lock:
+					google_cal_service.add_event(ea_ev)
+				with threading_lock:
+					logger.debug(get_event_start(ea_ev) + " Added.")
+			elif not ea_ev and g_ev:
+				# remove google event
+				with google_lock:
+					google_cal_service.remove_event(event_id=g_ev["id"])
+				with threading_lock:
+					logger.debug(get_event_start(g_ev) + " Removed.")
+	with threading_lock:
+		logger.debug(f"Finished {date}")
+
+
+def update_dates(google_cal_service: GoogleCalendarService, ea_service: EAssistantService, *dates_to_update: datetime.date, google_lock: threading.Lock, logging_lock: threading.Lock) -> list:
 	# Get school events
 	dates_to_update = sorted(dates_to_update)
 	if len(dates_to_update) == 1:
@@ -33,31 +80,39 @@ def update_date(google_cal_service: GoogleCalendarService, ea_service: EAssistan
 
 	events_to_enter = eas_events.get("events", [])
 	events_google = events_from_cal.get("items", [])
+
 	logger.debug("Retrieved google events: " + str(len(events_google)))
 	logger.debug("Easistent events: " + str(len(events_to_enter)))
-	# TODO add notify on special, predict meal time
-	for i, e in enumerate(events_to_enter):
-		special, body = ea_service.ef.google_event_body_from_parsed_event(e)
-		if special:
-			logger.info("Special: " + special)
-		event_updated = False
-		i_event = 0
-		# check common starting events
-		for e_google in events_google:
-			if events_start_at_same_time(e, e_google, no_timezone=True):
-				# logger.debug("Events starting at same time")
-				if not event_updated:
-					google_cal_service.update_event(event_id=e_google["id"], event_body=body)
-					logger.info(get_event_start(body) + " Patched.")
-					event_updated = True
-				else:
-					# duplicate event
-					google_cal_service.remove_event(event_id=e_google["id"])
-					logger.info(get_event_start(e_google) + " Removed.")
-				events_google.pop(i_event)
 
-		# there were no common events
-		if not event_updated:
-			# no common events
-			google_cal_service.add_event(body)
-			logger.info(get_event_start(body) + " Added.")
+	# Create event list sorted by day
+	EVENTS_BY_DAY = {}
+
+	for event in events_to_enter:
+		etime = get_event_start(event)
+		etime, date = etime[11:19], etime[:10]  # only the date part
+		if date not in EVENTS_BY_DAY:
+			EVENTS_BY_DAY[date] = {}
+		if etime not in EVENTS_BY_DAY[date]:
+			EVENTS_BY_DAY[date][etime] = {}
+		_, f_event = ea_service.ef.google_event_body_from_parsed_event(event)
+		if "easistent" not in EVENTS_BY_DAY[date][etime]:
+			EVENTS_BY_DAY[date][etime]["easistent"] = [f_event]
+		else:
+			EVENTS_BY_DAY[date][etime]["easistent"].append(f_event)
+
+	for g_event in events_google:
+		etime = get_event_start(g_event)
+		etime, date = etime[11:19], etime[:10]  # only the date part
+		if date not in EVENTS_BY_DAY:
+			EVENTS_BY_DAY[date] = {}
+		if etime not in EVENTS_BY_DAY[date]:
+			EVENTS_BY_DAY[date][etime] = {}
+		if "google" not in EVENTS_BY_DAY[date][etime]:
+			EVENTS_BY_DAY[date][etime]["google"] = [g_event]
+		else:
+			EVENTS_BY_DAY[date][etime]["google"].append(g_event)
+
+	threads = []
+	for date, construct in EVENTS_BY_DAY.items():
+		threads.append(threading.Thread(target=_update_single_date, daemon=True, args=(google_cal_service, construct, date, logging_lock, google_lock), name=f'thread_{date[5:]}'))
+	return threads

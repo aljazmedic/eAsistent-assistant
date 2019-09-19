@@ -9,7 +9,7 @@ from Crypto.Cipher import AES
 
 from pbkdf2 import PBKDF2
 
-logger = logging.logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 #TODO Typing
