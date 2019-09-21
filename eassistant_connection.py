@@ -6,6 +6,7 @@ from requests import Session
 import event_formatter as ef
 from misc import *
 from account_manager import AccountManager
+from meal_handler import MealConnection
 
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
@@ -27,9 +28,10 @@ def get_request_date_boundary(start_date: datetime.date = datetime.date.today(),
 class EAssistantService:
 	def __init__(self):
 		self.requests_session = None
-		self.account_manager = AccountManager()
+		self._account_manager = AccountManager()
 		data = self._parse_user_data()
-		self.init_session(data)
+		self.requests_session = self.init_session(data)
+		self.meals = MealConnection(self.requests_session)
 
 	def _parse_user_data(self):
 		r = {
@@ -39,7 +41,7 @@ class EAssistantService:
 		}
 
 		for field in ["uporabnik", "geslo"]:
-			r[field] = self.account_manager.retrieve(field, request_if_none=True)
+			r[field] = self._account_manager.retrieve(field, request_if_none=True)
 
 		return r
 
@@ -78,7 +80,7 @@ class EAssistantService:
 			"X-Requested-With": "XMLHttpRequest"
 		})
 		logging.info("Session authenticated!")
-		return self
+		return self.requests_session
 
 	def introduce(self):
 		table = ask_for(self.requests_session, "GET", "https://www.easistent.com/m/me/child").json()
