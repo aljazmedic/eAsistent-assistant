@@ -12,6 +12,13 @@ from typing import Union
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 
+def get_school_week(dt: datetime.date):
+	first_day = datetime.date(dt.year, 9, 1)
+	while first_day.weekday() >= 5:
+		first_day += datetime.timedelta(days=1)
+	return dt.isocalendar()[1] - first_day.isocalendar()[1]
+
+
 def ask_for(session, method, url, counter=0, **kwargs):
 	r = session.send(session.prepare_request(requests.Request(method, url, **kwargs)))
 	r.encoding = 'ISO-8859-1'
