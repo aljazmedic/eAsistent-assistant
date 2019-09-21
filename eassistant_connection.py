@@ -1,5 +1,4 @@
-import base64
-
+#!/usr/bin/python3
 from bs4 import BeautifulSoup
 from requests import Session
 
@@ -32,6 +31,7 @@ class EAssistantService:
 		data = self._parse_user_data()
 		self.requests_session = self.init_session(data)
 		self.meals = MealConnection(self.requests_session)
+		self.introduce()
 
 	def _parse_user_data(self):
 		r = {

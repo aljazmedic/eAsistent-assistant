@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from time import sleep
 
 import event_formatter as ef
@@ -12,7 +13,6 @@ def update_date(google_cal_service: GoogleCalendarService, ea_service: EAssistan
 	if len(dates_to_update) == 1:
 		dates_to_update.append(dates_to_update[0])
 	eas_events = ea_service.get_school_events(dates_to_update[0], dates_to_update[1]+datetime.timedelta(days=1))
-	# for date_to_update in dates_to_update:
 
 	if len(eas_events["events"]) == 0:
 		return
