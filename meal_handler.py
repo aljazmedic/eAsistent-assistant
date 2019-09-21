@@ -5,7 +5,8 @@ import requests
 from misc import get_school_week
 from bs4 import BeautifulSoup
 from pprint import PrettyPrinter
-from abc import ABC, abstractmethod
+import meal_prediction
+from meal_prediction import
 
 logger = logging.getLogger(__name__)
 pp = PrettyPrinter(indent=4)
@@ -42,8 +43,9 @@ def parse_meal_from_html(e: BeautifulSoup) -> dict:
 
 class MealConnection:
 
-	def __init__(self, easistent_session: requests.Session):
+	def __init__(self, easistent_session: requests.Session, predictor: callable, args: tuple):
 		self.session = easistent_session
+		self.predictor = predictor(*args)
 
 	def update_day(self, date: datetime.date):
 		meals = self._get_meals(get_school_week(date))
@@ -89,18 +91,8 @@ class MealConnection:
 		return return_meals
 
 
-class MealPredictor(ABC):
-	def __init__(self):
-		super().__init__()
-
-	@abstractmethod
-	def select_meal(self, e: list) -> dict:
-		pass
-
-
 if __name__ == '__main__':
 	from eassistant_connection import EAssistantService
-	logging.basicConfig(level=logging.DEBUG)
 	logger.debug("Testing meal handler")
 	eas = EAssistantService()
 	eas.meals.update_day(datetime.date(2019, 9, 30))

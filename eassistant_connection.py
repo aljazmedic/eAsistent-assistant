@@ -25,12 +25,12 @@ def get_request_date_boundary(start_date: datetime.date = datetime.date.today(),
 
 
 class EAssistantService:
-	def __init__(self):
+	def __init__(self, predictor: callable, predictor_args: tuple):
 		self.requests_session = None
 		self._account_manager = AccountManager()
 		data = self._parse_user_data()
 		self.requests_session = self.init_session(data)
-		self.meals = MealConnection(self.requests_session)
+		self.meals = MealConnection(self.requests_session, predictor, predictor_args)
 		self.introduce()
 
 	def _parse_user_data(self):
