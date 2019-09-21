@@ -9,8 +9,11 @@ import logging
 import pytz
 import requests
 import tzlocal
-from typing import Union
+
 DEFAULT_TIMEZONE = "Europe/Belgrade"
+
+logger = logging.logger = logging.getLogger(__name__)
+
 
 
 def get_school_week(dt: datetime.date):
@@ -32,6 +35,14 @@ def ask_for(session, method, url, counter=0, **kwargs):
 	return r
 
 
+def assure_dir(folder):
+	try:
+		if not os.path.exists(folder):
+			os.makedirs(folder)
+	except Exception as e:
+		logger.exception(e)
+
+
 def clear_dir(folder):
 	for the_file in os.listdir(folder):
 		file_path = os.path.join(folder, the_file)
@@ -41,11 +52,10 @@ def clear_dir(folder):
 			elif os.path.isdir(file_path):
 				shutil.rmtree(file_path)
 		except Exception as e:
-			print(e)
+			logger.exception(e)
 
 
 def gstrftime(dt, tz_force=None, separated_tz=False):
-	print(dt, end=" ")
 	# FORMAT: 2002-10-02T15:00:00Z
 	if type(dt) == datetime.date:  # Is only a date
 		dt = datetime.datetime.combine(dt, datetime.datetime.min.time())
@@ -60,7 +70,6 @@ def gstrftime(dt, tz_force=None, separated_tz=False):
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S")
 	else:
 		s = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
-	print("->", s)
 	return s
 
 
@@ -85,7 +94,7 @@ def progress_line(i, len_of_array, text, tab=30):
 
 
 if __name__ == '__main__':
-	logging.debug("Misc testing")
+	logger.debug("Misc testing")
 	print(gstrftime(datetime.datetime.now(), tz_force=tzlocal.get_localzone()))
 	print(gstrftime(datetime.datetime.now().astimezone(tzlocal.get_localzone())))
 

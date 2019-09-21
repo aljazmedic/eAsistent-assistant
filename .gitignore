@@ -1,6 +1,7 @@
 
 private/*
 temp/*
+log/*
 
 !private/.gitkeep
 !temp/.gitkeep

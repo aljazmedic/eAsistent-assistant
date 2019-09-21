@@ -1,31 +1,37 @@
 #!/usr/bin/python3
+
 from bs4 import BeautifulSoup
 from requests import Session
 
-import event_formatter as ef
-from misc import *
 from account_manager import AccountManager
 from meal_handler import MealConnection
+from event_formatter import EventFormatter
+from misc import tmp_save, ask_for, datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
 	# start_date += datetime.timedelta(days=1)
 
 	# Assure we don't parse for saturday or sunday
-	while start_date.weekday() >= 5:
-		start_date += datetime.timedelta(days=1)
+	start_date += datetime.timedelta(days=-start_date.weekday())  # set on monday that week
 
 	if not end_date:
 		end_date = start_date + datetime.timedelta(days=1)
-		while end_date.weekday() != 4:
-			end_date += datetime.timedelta(days=1)
+
+	end_date += datetime.timedelta(days=4-end_date.weekday())  # set on friday that week
+
 
 	return {"from": start_date.strftime("%Y-%m-%d"),
 	        "to":   end_date.  strftime("%Y-%m-%d")}
 
 
 class EAssistantService:
+
 	def __init__(self, predictor: callable, predictor_args: tuple):
+		self.ef = EventFormatter()
 		self.requests_session = None
 		self._account_manager = AccountManager()
 		data = self._parse_user_data()
@@ -47,7 +53,7 @@ class EAssistantService:
 
 	def init_session(self, user_data):
 		self.requests_session = Session()
-		logging.info("Initialization of session for eassistant.")
+		logger.info("Initialization of session for eassistant.")
 		# Initial get
 		login_url = "https://www.easistent.com/p/ajax_prijava"
 
@@ -56,7 +62,7 @@ class EAssistantService:
 		if post_request.status_code != 200 or len(post_json["errfields"]) != 0:
 			raise Exception(post_request, post_request.text)
 		for err in post_json.get('errfields', []):
-			logging.error(err)
+			logger.error(err)
 		redirect = post_json["data"]["prijava_redirect"]
 
 		get_request = self.requests_session.get(redirect)
@@ -82,16 +88,18 @@ class EAssistantService:
 		logging.info("Session authenticated!")
 		return self.requests_session
 
+
 	def introduce(self):
 		table = ask_for(self.requests_session, "GET", "https://www.easistent.com/m/me/child").json()
-		logging.info(f"Logged in as {table['display_name']} (ID:{table['id']}), age level: {table['age_level']}")
+		logger.info(f"Logged in as {table['display_name']} (ID:{table['id']}), age level: {table['age_level']}")
 
 	def get_school_events(self, dt_begin: datetime.date = datetime.date.today(), dt_end: datetime.date = None):
 		timetable_payload = get_request_date_boundary(dt_begin, dt_end)
+		logger.debug("Easistent timetable payload: " + str(timetable_payload))
 		parsed_table = ask_for(self.requests_session, "GET", "https://www.easistent.com/m/timetable/weekly",
 		                       params=timetable_payload).json()
 		tmp_save(parsed_table, "timetable_parsed", "json")
 		# print(parsed_table)
-		time_table_object = ef.to_timetable(parsed_table)
+		time_table_object = self.ef.format_timetable_for_entry(parsed_table)
 		tmp_save(time_table_object, "timetable_formatted", "json")
 		return time_table_object

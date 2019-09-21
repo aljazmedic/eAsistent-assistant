@@ -1,12 +1,11 @@
 import datetime
 import logging
 
-import requests
+import requests, os
 from misc import get_school_week
 from bs4 import BeautifulSoup
 from pprint import PrettyPrinter
 import meal_prediction
-from meal_prediction import
 
 logger = logging.getLogger(__name__)
 pp = PrettyPrinter(indent=4)
@@ -90,9 +89,13 @@ class MealConnection:
 					return_meals[datum] = [meal_option]
 		return return_meals
 
+	def _predict_from(self, options: list) -> dict:
+		return self.predictor.select_meal(options)
+
 
 if __name__ == '__main__':
 	from eassistant_connection import EAssistantService
 	logger.debug("Testing meal handler")
-	eas = EAssistantService()
+	eas = EAssistantService(meal_prediction.MealPredictorFromDB, tuple([os.path.join("temp", "db.db")]))
 	eas.meals.update_day(datetime.date(2019, 9, 30))
+	print(eas.meals.predictor)
