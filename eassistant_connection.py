@@ -5,6 +5,7 @@ from requests import Session
 
 import event_formatter as ef
 from misc import *
+from account_manager import AccountManager
 
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
@@ -23,19 +24,24 @@ def get_request_date_boundary(start_date: datetime.date = datetime.date.today(),
 	        "to":   end_date.  strftime("%Y-%m-%d")}
 
 
-def _parse_user_data(path: str):
-	with open(path) as rf:
-		data = json.load(rf)
-
-	data["geslo"] = str(base64.b64decode(data["geslo"].encode("utf-8")), "utf-8")
-	return data
-
-
 class EAssistantService:
 	def __init__(self):
 		self.requests_session = None
-		data = _parse_user_data("private/creds.json")
+		self.account_manager = AccountManager()
+		data = self._parse_user_data()
 		self.init_session(data)
+
+	def _parse_user_data(self):
+		r = {
+			"pin": "",
+			"captcha": "",
+			"koda": ""
+		}
+
+		for field in ["uporabnik", "geslo"]:
+			r[field] = self.account_manager.retrieve(field, request_if_none=True)
+
+		return r
 
 	def init_session(self, user_data):
 		self.requests_session = Session()
@@ -47,10 +53,11 @@ class EAssistantService:
 		post_json = post_request.json()
 		if post_request.status_code != 200 or len(post_json["errfields"]) != 0:
 			raise Exception(post_request, post_request.text)
-		print(post_json)
-		rdrect = post_json["data"]["prijava_redirect"]
+		for err in post_json.get('errfields', []):
+			logging.error(err)
+		redirect = post_json["data"]["prijava_redirect"]
 
-		get_request = self.requests_session.get(rdrect)
+		get_request = self.requests_session.get(redirect)
 		# get_request.encoding = 'ISO-8859-1'
 
 		# Extract auth metas from html
