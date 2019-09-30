@@ -48,7 +48,6 @@ class MealConnection:
 
 	def update_day(self, date: datetime.date):
 		meals = self._get_meals(get_school_week(date))
-		pp.pprint(meals)
 		for date, options in meals.items():
 			self._pick_meal(options[5])
 
@@ -95,6 +94,7 @@ class MealConnection:
 
 if __name__ == '__main__':
 	from eassistant_connection import EAssistantService
+	logging.basicConfig(level=logging.DEBUG)
 	logger.debug("Testing meal handler")
 	eas = EAssistantService(meal_prediction.MealPredictorFromDB, tuple([os.path.join("temp", "db.db")]))
 	eas.meals.update_day(datetime.date(2019, 9, 30))
