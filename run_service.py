@@ -67,16 +67,21 @@ def main():
 							  google_lock=THREADING_LOCKS["google"],
 							  logging_lock=THREADING_LOCKS["logging"])
 
+	"""
 	for t in threads:
 		t.start()
+	"""
 
 	# Do meal inquiry
 
+	eas.meals.update_day(datetime.date.today()+datetime.timedelta(days=7))
+
+	"""
 	while any([t.isAlive() for t in threads]):
 		for t in threads:
 			t.join(2.0)
 			# if it isn't alive anymore, update meal for that day
-
+	"""
 
 if __name__ == '__main__':
 	main()

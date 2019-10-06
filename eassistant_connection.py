@@ -88,7 +88,6 @@ class EAssistantService:
 		logging.info("Session authenticated!")
 		return self.requests_session
 
-
 	def introduce(self):
 		table = ask_for(self.requests_session, "GET", "https://www.easistent.com/m/me/child").json()
 		logger.info(f"Logged in as {table['display_name']} (ID:{table['id']}), age level: {table['age_level']}")
