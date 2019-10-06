@@ -17,13 +17,16 @@ class MealPredictorFromDB(MealPredictor):
 	def __init__(self, db_path: str):
 		super(MealPredictorFromDB, self).__init__()
 		self.db_path = db_path
-		self.get_db()
+		self.db = self.get_db()
 		logger.debug("Starting on db: " + str(self.db))
 
 	def select_meal(self, e: list) -> dict:
 		pass
 
 	def train(self):
+		pass
+
+	def manual_select(self, e: list):
 		pass
 
 	def populate(self, data: list):
