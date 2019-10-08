@@ -49,7 +49,8 @@ class MealConnection:
 	def update_day(self, date: datetime.date):
 		meals = self._get_meals(get_school_week(date))
 		for date, options in meals.items():
-			self._pick_meal(options[5])
+			option = self.predictor.select_meal(options)
+			self._pick_meal(option)
 
 	def _pick_meal(self, meal_option: dict):
 			prepped = self.session.prepare_request(meal_option["actions"]["sign_on"])
