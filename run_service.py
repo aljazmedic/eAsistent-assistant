@@ -62,7 +62,7 @@ def main():
 	threads = eh.update_dates(gcs,
 							  eas,
 							  datetime.date.today() + datetime.timedelta(days=1),
-							  datetime.date(2019, 9, 27),
+							  datetime.date.today() + datetime.timedelta(days=8),
 							  google_lock=THREADING_LOCKS["google"],
 							  logging_lock=THREADING_LOCKS["logging"])
 
