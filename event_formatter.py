@@ -8,22 +8,18 @@ GOOGLE_EVENT_RANGE = 11
 
 
 def hash_event(e):
+	threeLetterName = (e.get("subject", e.get("name")).lower().replace("č", "c").replace("š", "s").replace("ž", "z") + "___")[:3]
 	if e["type"] == "school_hour":
-		N = 1
+		return f'id:1{threeLetterName}{extract_HHMM(e["start"].get("dateTime", e["start"].get("date")))}{extract_HHMM(e["end"].get("dateTime", e["end"].get("date")))}'
 	elif e["type"] == "event":
-		N = 2
+		return f'id:2{threeLetterName}{extract_HHMM(e["start"].get("dateTime", e["start"].get("date")))}{extract_HHMM(e["end"].get("dateTime", e["end"].get("date")))}'
 	else:
-		N = 3
-	if "dateTime" in e["start"]:
-		hhmm = f"{extract_HHMM(e['start']['dateTime'])}{extract_HHMM(e['end']['dateTime'])}"
-	else:
-		hhmm = f"{e['start']['date']}"
-	return f'id:{N}{(e.get("subject", e.get("name")).lower().replace("č", "c").replace("š", "s").replace("ž","z") + "___")[:3]}{hhmm}'
+		return f'id:3{threeLetterName}{extract_HHMM(e["start"].get("dateTime", e["start"].get("date")))}{extract_HHMM(e["end"].get("dateTime", e["end"].get("date")))}'
 
 
 def str_to_colorId(input_str: str, range_n: int = GOOGLE_EVENT_RANGE, color_string=False) -> int:
 	if color_string:
-		return int(input_str[1]+input_str[3], 16)%range_n
+		return int(input_str[1]+input_str[3], 16) % range_n
 	sum_of_ascii = 0
 	for c in input_str:
 		sum_of_ascii += ord(c)
@@ -31,6 +27,8 @@ def str_to_colorId(input_str: str, range_n: int = GOOGLE_EVENT_RANGE, color_stri
 
 
 class EventFormatter:
+	# TODO Create serializable format class
+	# TODO Do Format string for properties?
 	def __init__(self):
 		self.TIMEZONE = 'Europe/Belgrade'
 		self.COLORMAP = self.load_colormap()
@@ -53,19 +51,24 @@ class EventFormatter:
 	def google_event_body_from_parsed_event(self, e: dict) -> (str, dict):
 		specialty = e.get("special", None)
 		if e["type"] == "school_hour":
-			description = [
-				f'Speciality: {e.get("special", "None")}',
-				f'Classroom: {e["classroom"]}',
-				f'Teachers: {", ".join(e["teachers"])}',
-				f'#school {e["type"]} {e["hash"]}'
-			]
-			abbr_teachers = None
-			if e["teachers"]:
-				abbr_teachers = " ".join("".join([x[0].upper() for x in teacher.split(" ")]) for teacher in e["teachers"])
-				addition = f'({":".join([e["classroom"][:3], abbr_teachers])})'
-			summary = f'{e["subject"]}'
-			if e.get("classroom", None) or abbr_teachers:
-				summary += " " + addition
+			description = [f'Speciality: {e.get("special", "None")}']
+
+			addition = []
+			if "classroom" in e:
+				addition.append((e["classroom"]+"  ")[:3])
+				description.append(f'Classroom: {e["classroom"]}')
+			if "teachers" in e:
+				addition.append(" ".join("".join([x[0].upper() for x in teacher.split(" ")]) for teacher in e["teachers"]))
+				description.append(f'Teachers: {", ".join(e["teachers"])}')
+
+			if addition:
+				addition = f'({":".join(addition)})'
+			else:
+				addition = ""
+
+			description.append(f'#school {e["type"]} {e["hash"]}')
+
+			summary = f'{(e.get("subject", e.get("name"))+"  ")[:3]}' + addition
 			BODY = {
 				"summary": summary,
 				"start": e["start"],
@@ -75,44 +78,56 @@ class EventFormatter:
 			}
 		elif e["type"] == "event":
 			description = [
-				f'Location: {e["location"]}',
-				f'Teachers: {", ".join(e["teachers"])}',
-				f'#school {e["type"]} {e["hash"]}'
+				f'Location: {e["location"]}'
 			]
-			abbr_teachers = None
-			if e["teachers"]:
-				abbr_teachers = " ".join("".join([x[0].upper() for x in teacher.split(" ")]) for teacher in e["teachers"])
-				addition = f'({":".join([e.get("location", "")[:3], abbr_teachers])})'
-			summary = f'{e["name"]}'
-			if e.get("location", None) or abbr_teachers:
-				summary += " " + addition
+			addition = []
+			if "classroom" in e:
+				addition.append((e["classroom"] + "  ")[:3])
+			if "teachers" in e:
+				addition.append(
+					" ".join("".join([x[0].upper() for x in teacher.split(" ")]) for teacher in e["teachers"]))
+				description.append(f'Teachers: {", ".join(e["teachers"])}')
+
+			if addition:
+				addition = f'({":".join(addition)})'
+			else:
+				addition = ""
+
+			description.append(f'#school {e["type"]} {e["hash"]}')
+
+			summary = f'{(e.get("subject", e.get("name"))+"  ")[:3]}' + addition
 			BODY = {
 				"summary": summary,
 				"start": e["start"],
 				"end": e["end"],
-				"description": "\n".join(description),
-				"colorId": str_to_colorId(str(hash(["start"]))+e["type"])
+				"description": ("\n".join(description)).strip(),
+				"colorId": str_to_colorId(str(hash(e["start"].get("dateTime", e["start"].get("date"))))+e["type"])
 			}
 		else:  # e["type"] == "all_day_event"
+			# TODO make sure to connect multiday-events
 			description = [
-				f'Location: {e["location"]}',
-				f'Teachers: {", ".join(e["teachers"])}',
-				f'Type: {e["event_type"]}',
-				f'#school {e["type"]} {e["hash"]}'
+				f'Location: {e["location"]}'
 			]
-			abbr_teachers = None
-			if e["teachers"]:
-				abbr_teachers = " ".join("".join([x[0].upper() for x in teacher.split(" ")]) for teacher in e["teachers"])
-				addition = f'({":".join([e.get("location", "")[:3], abbr_teachers])})'
-			summary = f'{e["name"]}'
-			if e.get("location", None) or abbr_teachers:
-				summary += " " + addition
+			addition = []
+			if "classroom" in e:
+				addition.append((e["classroom"] + "  ")[:3])
+			if "teachers" in e:
+				addition.append(
+					" ".join("".join([x[0].upper() for x in teacher.split(" ")]) for teacher in e["teachers"]))
+				description.append(f'Teachers: {", ".join(e["teachers"])}')
+
+			if addition:
+				addition = f'({":".join(addition)})'
+			else:
+				addition = ""
+			description.append(f'#school {e["type"]} {e["hash"]}')
+			summary = f'{(e.get("subject", e.get("name"))+"  ")[:3]}' + addition
 			BODY = {
 				"summary": summary,
 				"start": e["start"],
 				"end": e["end"],
-				"description": "\n".join(description),
-				"colorId": str_to_colorId(str(hash(["start"]))+e["type"])
+				"description": ("\n".join(description)).strip(),
+				"colorId": str_to_colorId(str(hash(e["start"].get("dateTime", e["start"].get("date"))))+e["type"])
 			}
 		return specialty, BODY
 
