@@ -27,6 +27,8 @@ def str_to_colorId(input_str: str, range_n: int = GOOGLE_EVENT_RANGE, color_stri
 
 
 class EventFormatter:
+	#TODO Create serializable format class
+	#TODO Do Format string for properties?
 	def __init__(self):
 		self.TIMEZONE = 'Europe/Belgrade'
 		self.COLORMAP = self.load_colormap()
@@ -102,7 +104,7 @@ class EventFormatter:
 				"colorId": str_to_colorId(str(hash(e["start"].get("dateTime", e["start"].get("date"))))+e["type"])
 			}
 		else:  # e["type"] == "all_day_event"
-			#make sure to connect multiday-events
+			#TODO make sure to connect multiday-events
 			description = [
 				f'Location: {e["location"]}'
 			]
