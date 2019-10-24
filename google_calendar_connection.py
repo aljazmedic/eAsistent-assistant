@@ -19,7 +19,9 @@ logger.debug("Loaded.")
 g_api_logger = logging.getLogger("googleapiclient")
 g_api_logger.setLevel(logging.CRITICAL)
 
+
 class GoogleCalendarService:
+	# TODO Create commit - do styled service
 	def __init__(self, calendar_name: str, body: dict = None, remove_if_exists: bool = False, timezone="Europe/Belgrade"):
 		self.working_calendar = ""
 		self.calendar_id = ""
