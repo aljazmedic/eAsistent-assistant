@@ -1,6 +1,6 @@
 import logging
 import os
-import threading
+import threading, dotenv
 
 import event_handler as eh
 from arguments import run_args_init
@@ -82,6 +82,7 @@ def main():
 			t.join(2.0)
 			# if it isn't alive anymore, update meal for that day
 	"""
+
 
 if __name__ == '__main__':
 	main()

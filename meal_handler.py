@@ -82,7 +82,9 @@ class MealConnection:
 		for tr in rows[1:]:
 			for td in tr.find_all('td'):
 				meal_option = parse_meal_from_html(td)
-				datum = meal_option["datum"]
+				if not meal_option:
+					continue
+				datum = meal_option.get("datum")
 				if datum in return_meals:
 					return_meals[datum].append(meal_option)
 				else:
