@@ -14,6 +14,7 @@ import dotenv
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 logger = logging.logger = logging.getLogger(__name__)
+dotenv.set_key(os.path.join(os.curdir, ".env"), key_to_set="SA_DOTENV_DIR", value_to_set=os.path.join(os.curdir, ".env"))
 
 
 def ask_for(session, method, url, counter=0, **kwargs):
@@ -46,8 +47,15 @@ def clear_dir(folder):
 		except Exception as e:
 			logger.exception(e)
 
+
 def load_dotenv():
-	dotenv.load_dotenv(os.path.join(os.curdir, ".env"))
+	dotenv.load_dotenv(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")))
+
+
+def write_to_dotenv(key: str, value: str):
+	dotenv.set_key(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")), key, value)
+	load_dotenv()
+
 
 def gstrftime(dt, tz_force=None, separated_tz=False):
 	# FORMAT: 2002-10-02T15:00:00Z
@@ -91,4 +99,3 @@ if __name__ == '__main__':
 	logger.debug("Misc testing")
 	print(gstrftime(datetime.datetime.now(), tz_force=tzlocal.get_localzone()))
 	print(gstrftime(datetime.datetime.now().astimezone(tzlocal.get_localzone())))
-
