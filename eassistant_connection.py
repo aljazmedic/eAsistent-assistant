@@ -28,7 +28,7 @@ class EAssistantService:
 		self.ef = EventFormatter()
 
 		self.requests_session = None
-		self.account_manager = AccountManager()
+		self.account_manager = AccountManager("easistent_db")
 		data = self._parse_user_data()
 		self.init_session(data)
 		self.introduce()
@@ -54,6 +54,17 @@ class EAssistantService:
 		post_request = self.requests_session.post(login_url, data=user_data, allow_redirects=True)
 		post_json = post_request.json()
 		if post_request.status_code != 200 or len(post_json["errfields"]) != 0:
+			if post_json["data"].get("require_captcha", False):
+				logger.warning("Captcha Enabled")
+				input("Please solve captcha in your browser, then press Enter to continue...")
+				return self.init_session(self._parse_user_data())
+			if "uporabnik" in post_json["errfields"]:
+				# Wrong pass
+				self.account_manager.remove("uporabnik")
+				self.account_manager.remove("geslo")
+				# logger.warning("Wrong username/password combination. Tries left:") # TODO Parse from message in json.. when?
+				return self.init_session(self._parse_user_data())
+
 			raise Exception(post_request, post_request.text)
 		for err in post_json.get('errfields', []):
 			logger.error(err)
