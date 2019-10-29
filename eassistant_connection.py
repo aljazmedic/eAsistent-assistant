@@ -5,10 +5,11 @@ from requests import Session
 from account_manager import AccountManager
 from meal_handler import MealConnection
 from event_formatter import EventFormatter
-from misc import tmp_save, ask_for, datetime
+from util import tmp_save, ask_for, datetime
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def get_request_date_boundary(start_date: datetime.date = datetime.date.today(), end_date: datetime.date = None):
 	# start_date += datetime.timedelta(days=1)
@@ -21,7 +22,6 @@ def get_request_date_boundary(start_date: datetime.date = datetime.date.today(),
 
 	end_date += datetime.timedelta(days=4-end_date.weekday())  # set on friday that week
 
-
 	return {"from": start_date.strftime("%Y-%m-%d"),
 	        "to":   end_date.  strftime("%Y-%m-%d")}
 
@@ -31,7 +31,7 @@ class EAssistantService:
 	def __init__(self, predictor: callable, predictor_args: tuple):
 		self.ef = EventFormatter()
 		self.requests_session = None
-		self._account_manager = AccountManager()
+		self._account_manager = AccountManager("easistent_db")
 		data = self._parse_user_data()
 		self.requests_session = self.init_session(data)
 		self.meals = MealConnection(self.requests_session, predictor, predictor_args)
@@ -58,6 +58,17 @@ class EAssistantService:
 		post_request = self.requests_session.post(login_url, data=user_data, allow_redirects=True)
 		post_json = post_request.json()
 		if post_request.status_code != 200 or len(post_json["errfields"]) != 0:
+			if post_json["data"].get("require_captcha", False):
+				logger.warning("Captcha Enabled")
+				input("Please solve captcha in your browser, then press Enter to continue...")
+				return self.init_session(self._parse_user_data())
+			if "uporabnik" in post_json["errfields"]:
+				# Wrong pass
+				self._account_manager.remove("uporabnik")
+				self._account_manager.remove("geslo")
+				# logger.warning("Wrong username/password combination. Tries left:") # TODO Parse from message in json.. when?
+				return self.init_session(self._parse_user_data())
+
 			raise Exception(post_request, post_request.text)
 		for err in post_json.get('errfields', []):
 			logger.error(err)

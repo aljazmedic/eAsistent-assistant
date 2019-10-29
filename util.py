@@ -9,11 +9,12 @@ import logging
 import pytz
 import requests
 import tzlocal
+import dotenv
 
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 logger = logging.logger = logging.getLogger(__name__)
-
+dotenv.set_key(os.path.join(os.curdir, ".env"), key_to_set="SA_DOTENV_DIR", value_to_set=os.path.join(os.curdir, ".env"))
 
 
 def get_school_week(dt: datetime.date):
@@ -37,8 +38,7 @@ def ask_for(session, method, url, counter=0, **kwargs):
 
 def assure_dir(folder):
 	try:
-		if not os.path.exists(folder):
-			os.makedirs(folder)
+		os.makedirs(folder, exist_ok=True)
 	except Exception as e:
 		logger.exception(e)
 
@@ -53,6 +53,19 @@ def clear_dir(folder):
 				shutil.rmtree(file_path)
 		except Exception as e:
 			logger.exception(e)
+
+
+def load_dotenv():
+	dotenv.load_dotenv(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")))
+
+
+def write_to_dotenv(key: str, value: str):
+	dotenv.set_key(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")), key, value)
+	load_dotenv()
+
+
+def get_event_start(e: dict) -> str:
+	return e["start"].get("dateTime", e["start"].get("date", ""))
 
 
 def gstrftime(dt, tz_force=None, separated_tz=False):
@@ -97,4 +110,3 @@ if __name__ == '__main__':
 	logger.debug("Misc testing")
 	print(gstrftime(datetime.datetime.now(), tz_force=tzlocal.get_localzone()))
 	print(gstrftime(datetime.datetime.now().astimezone(tzlocal.get_localzone())))
-

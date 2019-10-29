@@ -1,17 +1,12 @@
 #!/usr/bin/python3
 
 import logging
-import threading
 
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
-from misc import gstrptime, datetime
+from util import gstrptime, datetime, get_event_start
 
 logger = logging.getLogger(__name__)
-
-
-def get_event_start(e: dict) -> str:
-	return e["start"].get("dateTime", e["start"].get("date", ""))
 
 
 def events_start_at_same_time(e1: dict, e2: dict, no_timezone: bool = False) -> bool:
@@ -22,10 +17,9 @@ def events_start_at_same_time(e1: dict, e2: dict, no_timezone: bool = False) -> 
 	return s1 == s2
 
 
-def _update_single_date(google_cal_service: GoogleCalendarService, date_construct: dict, date: str, logging_lock: threading.Lock, google_lock: threading.Lock) -> None:
+def _update_single_date(google_cal_service: GoogleCalendarService, date_construct: dict, date: str) -> None:
 	"""
 	:param google_cal_service:
-	:param ea_service:
 	:param date_construct: dictionary with entries for time
 	:param date:
 	:return:
@@ -39,20 +33,11 @@ def _update_single_date(google_cal_service: GoogleCalendarService, date_construc
 	"""
 
 	def list_safe_get(l: list, idx: int, default=None):
-		"""
-
-		:param l:
-		:param idx:
-		:param default:
-		:return: Safely return index from list or default
-		"""
 		try:
 			return l[idx]
 		except IndexError:
 			return default
 
-	with logging_lock:
-		logger.debug(f"Updating {date}")
 	for e_time, all_events in date_construct.items():
 		google_events = all_events.get("google", [])
 		easistent_events = all_events.get("easistent", [])
@@ -62,27 +47,19 @@ def _update_single_date(google_cal_service: GoogleCalendarService, date_construc
 
 			if ea_ev and g_ev:
 				# patch google event
-				with google_lock:
-					google_cal_service.update_event(event_id=g_ev["id"], event_body=ea_ev)
-				with logging_lock:
-					logger.debug(get_event_start(ea_ev) + " Patched.")
+				google_cal_service.update_event(event_id=g_ev["id"], event_body=ea_ev, execution_thread=date)
+				logger.debug(get_event_start(ea_ev) + " Patch queued.")
 			elif ea_ev and not g_ev:
 				# create google event from ea_ev
-				with google_lock:
-					google_cal_service.add_event(ea_ev)
-				with logging_lock:
-					logger.debug(get_event_start(ea_ev) + " Added.")
+				google_cal_service.add_event(ea_ev, execution_thread=date)
+				logger.debug(get_event_start(ea_ev) + " Add queued.")
 			elif not ea_ev and g_ev:
 				# remove google event
-				with google_lock:
-					google_cal_service.remove_event(event_id=g_ev["id"])
-				with logging_lock:
-					logger.debug(get_event_start(g_ev) + " Removed.")
-	with logging_lock:
-		logger.debug(f"Finished {date}")
+				google_cal_service.remove_event(event_id=g_ev["id"], execution_thread=date)
+				logger.debug(get_event_start(g_ev) + " Remove queued.")
 
 
-def update_dates(google_cal_service: GoogleCalendarService, ea_service: EAssistantService, *dates_to_update: datetime.date, google_lock: threading.Lock, logging_lock: threading.Lock) -> list:
+def update_dates(google_cal_service: GoogleCalendarService, ea_service: EAssistantService, *dates_to_update: datetime.date):
 	# Get school events
 	dates_to_update = sorted(dates_to_update)
 	if len(dates_to_update) == 1:
@@ -97,7 +74,7 @@ def update_dates(google_cal_service: GoogleCalendarService, ea_service: EAssista
 	events_google = events_from_cal.get("items", [])
 
 	logger.debug("Retrieved google events: " + str(len(events_google)))
-	logger.debug("Easistent events: " + str(len(events_to_enter)))
+	logger.debug("Easistent events:        " + str(len(events_to_enter)))
 
 	# Create event list sorted by day
 	EVENTS_BY_DAY = {}
@@ -127,7 +104,5 @@ def update_dates(google_cal_service: GoogleCalendarService, ea_service: EAssista
 		else:
 			EVENTS_BY_DAY[date][etime]["google"].append(g_event)
 
-	threads = []
 	for date, construct in EVENTS_BY_DAY.items():
-		threads.append(threading.Thread(target=_update_single_date, daemon=True, args=(google_cal_service, construct, date, logging_lock, google_lock), name=f'thread_{date[5:]}'))
-	return threads
+		_update_single_date(google_cal_service, construct, date)

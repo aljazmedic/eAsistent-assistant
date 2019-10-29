@@ -2,22 +2,20 @@
 import pickle
 import pprint
 from time import sleep
-from typing import Union
+from typing import Union, Dict, List, Tuple, Optional
 
-import logging
+import logging, threading
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from misc import gstrftime, os, datetime, pytz
+from util import gstrftime, os, datetime, pytz
 
 logger = logging.getLogger(__name__)
 
-logger.debug("Loaded.")
-
 # ignore majority of logs
-g_api_logger = logging.getLogger("googleapiclient")
-g_api_logger.setLevel(logging.CRITICAL)
+logging.getLogger("googleapiclient").setLevel(logging.CRITICAL)
+
 
 
 class GoogleCalendarService:
@@ -25,6 +23,7 @@ class GoogleCalendarService:
 	def __init__(self, calendar_name: str, body: dict = None, remove_if_exists: bool = False, timezone="Europe/Belgrade"):
 		self.working_calendar = ""
 		self.calendar_id = ""
+		self.execution_requests = {}
 
 		self.GMT_OFF = pytz.timezone(timezone)
 
@@ -65,7 +64,8 @@ class GoogleCalendarService:
 		self.calendar_id = self.working_calendar["id"]
 		logger.debug(f"Connected to {self.calendar_id}")
 
-	def find_calendar_by_name(self, name: str, exactly_one=False) -> Union[list, dict]:
+	def find_calendar_by_name(self, name, exactly_one=False):
+		# type: (str, Optional[bool]) -> Union[List, Dict]
 		r = []
 		results = self.service.calendarList().list().execute()  # Get all the calendars
 		for calendar in results.get("items", []):
@@ -75,7 +75,8 @@ class GoogleCalendarService:
 				r.append(calendar)
 		return r
 
-	def hook_calendar(self, name: object, body: object) -> dict:
+	def hook_calendar(self, name, body):
+		# type: (str, Dict) -> Dict
 		"""
 		:param name: calendars name
 		:param body: body structure
@@ -97,7 +98,8 @@ class GoogleCalendarService:
 		self.calendar_id = self.working_calendar["id"]
 		return self.working_calendar
 
-	def remove_calendar(self, calendar_id=None, name=None) -> None:
+	def remove_calendar(self, calendar_id=None, name=None):
+		# type: (str, Union[str, None]) -> Union[dict, None]
 		"""
 		:param calendar_id: identifier string of a calendar
 		:param name: name of the calendar
@@ -110,7 +112,8 @@ class GoogleCalendarService:
 			calendar_id = calendar["id"]
 		return self.service.calendars().delete(calendarId=calendar_id).execute()
 
-	def get_events_between(self, time_tuple: tuple, **list_args) -> dict:
+	def get_events_between(self, time_tuple, **list_args):
+		# type: (Tuple, Dict[str]) -> Dict
 		"""
 		:param time_tuple: time boundary of min and max time
 		:param list_args: q="*", ...
@@ -120,29 +123,87 @@ class GoogleCalendarService:
 		return self.service.events().list(calendarId=self.calendar_id, timeZone=self.GMT_OFF,
 		                                  timeMin=time_min, timeMax=time_max, **list_args).execute()
 
-	def add_event(self, event_body: dict) -> dict:
-		sleep(1)
-		try:
-			return self.service.events().insert(calendarId=self.calendar_id, body=event_body).execute()
-		except Exception as e:
-			logger.debug("Error adding:\n"+str(event_body))
-			logger.error(e)
+	def add_event(self, event_body, execution_thread=None):
+		# type: (Dict, Union[str, None]) -> Union[List, Dict]
+		http_req = self.service.events().insert(calendarId=self.calendar_id, body=event_body)
 
-	def update_event(self, event_id: str, event_body: dict, **patch_kwargs) -> dict:
-		sleep(1)
-		try:
-			return self.service.events().update(calendarId=self.calendar_id, eventId=event_id, body=event_body, **patch_kwargs).execute()
-		except Exception as e:
-			logger.debug("Error updating:\n"+str(event_body))
-			logger.error(e)
+		if execution_thread:
+			if execution_thread in self.execution_requests:
+				self.execution_requests[execution_thread].append(http_req)
+			else:
+				self.execution_requests[execution_thread] = [http_req]
+			return self.execution_requests[execution_thread]
+		else:
+			sleep(1)
+			try:
+				return http_req.execute()
+			except Exception as e:
+				logger.debug("Error adding:\n"+str(event_body))
+				logger.error(e)
 
-	def remove_event(self, event_id: str, **remove_kwargs):
-		sleep(1)
-		try:
-			return self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs).execute()
-		except Exception as e:
-			logger.debug("Error removing")
-			logger.error(e)
+	def update_event(self, event_id, event_body, execution_thread=None, **patch_kwargs):
+		# type: (str, Dict, Union[str, None], Dict[str]) -> Union[List, Dict]
+		http_req = self.service.events().update(calendarId=self.calendar_id, eventId=event_id, body=event_body,
+													**patch_kwargs)
+
+		if execution_thread:
+			if execution_thread in self.execution_requests:
+				self.execution_requests[execution_thread].append(http_req)
+			else:
+				self.execution_requests[execution_thread] = [http_req]
+		else:
+			sleep(1)
+			try:
+				return http_req.execute()
+			except Exception as e:
+				logger.debug("Error updating:\n" + str(event_body))
+				logger.error(e)
+
+	def remove_event(self, event_id, execution_thread=None, **remove_kwargs):
+		# type: (str, Union[str, None], Dict[str]) -> Union[List, Dict]
+		http_req = self.service.events().delete(calendarId=self.calendar_id, eventId=event_id, **remove_kwargs)
+
+		if execution_thread:
+			if execution_thread in self.execution_requests:
+				self.execution_requests[execution_thread].append(http_req)
+			else:
+				self.execution_requests[execution_thread] = [http_req]
+			return self.execution_requests[execution_thread]
+		else:
+			sleep(1)
+			try:
+				return http_req.execute()
+			except Exception as e:
+				logger.debug("Error removing")
+				logger.error(e)
+
+	def create_execution_threads(self, google_lock, logging_lock):
+		# type: (threading.Lock, threading.Lock) -> Dict
+		ret_list_of_threads = {}
+
+		# Function that a thread will run
+
+		def do_function(dict_of_queues: dict, name: str, google_lock_: threading.Lock, logging_lock_: threading.Lock):
+			thread_name = f'gcs_t_{name[5:]}'
+			with logging_lock_:
+				logger.info(f"Thread {thread_name} started with {len(dict_of_queues[name])} http requests.")
+			while len(dict_of_queues[name]) >= 1:
+				try:
+					with google_lock_:
+						dict_of_queues[name].pop(0).execute()
+					sleep(1)
+				except Exception as e:
+					logger.debug(f"Error in executing queue: {thread_name}")
+					logger.error(e)
+			del dict_of_queues[name]
+			with logging_lock_:
+				logger.info(f"Thread {name} finished.")
+
+		for name_of_queue, queue in self.execution_requests.items():
+			ret_list_of_threads[name_of_queue] = threading.Thread(target=do_function,
+																  args=(self.execution_requests, name_of_queue, google_lock, logging_lock),
+																  name=f'gcs_t_{name_of_queue[5:]}')
+		return ret_list_of_threads
 
 
 if __name__ == '__main__':
