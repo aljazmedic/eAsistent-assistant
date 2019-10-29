@@ -59,20 +59,17 @@ def main():
 	eas.introduce()
 	THREADING_LOCKS["google"] = threading.Lock()
 	THREADING_LOCKS["logging"] = threading.Lock()
-	threads = eh.update_dates(gcs,
-							  eas,
-							  datetime.date.today() + datetime.timedelta(days=1),
-							  datetime.date(2019, 9, 27),
-							  google_lock=THREADING_LOCKS["google"],
-							  logging_lock=THREADING_LOCKS["logging"])
+	eh.update_dates(	gcs, eas,
+						datetime.date.today() + datetime.timedelta(days=6))
 
-	for t in threads:
+	threads = gcs.create_execution_threads(google_lock=THREADING_LOCKS["google"], logging_lock=THREADING_LOCKS["logging"])
+	for t_name, t in threads.items():
 		t.start()
 
 	# Do meal inquiry
 
-	while any([t.isAlive() for t in threads]):
-		for t in threads:
+	while any([t.isAlive() for t_name, t in threads.items()]):
+		for t_name, t in threads.items():
 			t.join(2.0)
 			# if it isn't alive anymore, update meal for that day
 
