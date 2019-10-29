@@ -10,7 +10,7 @@ import pytz
 import requests
 import tzlocal
 import dotenv
-
+from typing import Union, Optional, Dict, List, Tuple
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 logger = logging.logger = logging.getLogger(__name__)
@@ -68,6 +68,10 @@ def get_event_start(e: dict) -> str:
 	return e["start"].get("dateTime", e["start"].get("date", ""))
 
 
+def get_event_end(e: dict) -> str:
+	return e["end"].get("dateTime", e["end"].get("date", ""))
+
+
 def gstrftime(dt, tz_force=None, separated_tz=False):
 	# FORMAT: 2002-10-02T15:00:00Z
 	if type(dt) == datetime.date:  # Is only a date
@@ -104,6 +108,27 @@ def tmp_save(txt, name, end="json"):
 def progress_line(i, len_of_array, text, tab=30):
 	n = int(((i + 1) / len_of_array) * tab)
 	print("\r[", "=" * n, ">", " " * (tab - n - 1), "] ", i, " of ", len_of_array, " %s (%2.1f %%)" % (text, 100.0 * (i / len_of_array)), sep="", end="")
+
+
+def event_time_difference(list_of_events, cmp_function = min):
+	# type: (List[dict], callable) -> Tuple[dict, dict]
+
+	def get_delta(e1_: dict, e2_: dict):
+		e1_end = gstrptime(get_event_end(e1_))
+		e2_start = gstrptime(get_event_start(e2_))
+		return e2_start - e1_end
+
+	r1 = list_of_events[0]
+	r2 = list_of_events[1]
+	best = get_delta(r1, r2)
+	for i, e1 in enumerate(list_of_events[:-1], start=1):
+		e2 = list_of_events[i]
+		d = get_delta(e1, e2)
+		if cmp_function(d, best) == d:
+			r1, r2 = e1, e2
+			best = d
+
+	return r1, r2
 
 
 if __name__ == '__main__':
