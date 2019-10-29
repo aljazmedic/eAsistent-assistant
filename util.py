@@ -57,6 +57,10 @@ def write_to_dotenv(key: str, value: str):
 	load_dotenv()
 
 
+def get_event_start(e: dict) -> str:
+	return e["start"].get("dateTime", e["start"].get("date", ""))
+
+
 def gstrftime(dt, tz_force=None, separated_tz=False):
 	# FORMAT: 2002-10-02T15:00:00Z
 	if type(dt) == datetime.date:  # Is only a date

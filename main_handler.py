@@ -4,13 +4,9 @@ import logging
 
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
-from util import gstrptime, datetime
+from util import gstrptime, datetime, get_event_start
 
 logger = logging.getLogger(__name__)
-
-
-def get_event_start(e: dict) -> str:
-	return e["start"].get("dateTime", e["start"].get("date", ""))
 
 
 def events_start_at_same_time(e1: dict, e2: dict, no_timezone: bool = False) -> bool:
@@ -78,7 +74,7 @@ def update_dates(google_cal_service: GoogleCalendarService, ea_service: EAssista
 	events_google = events_from_cal.get("items", [])
 
 	logger.debug("Retrieved google events: " + str(len(events_google)))
-	logger.debug("Easistent events: " + str(len(events_to_enter)))
+	logger.debug("Easistent events:        " + str(len(events_to_enter)))
 
 	# Create event list sorted by day
 	EVENTS_BY_DAY = {}
