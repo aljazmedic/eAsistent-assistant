@@ -2,7 +2,7 @@ import logging
 import os
 import threading
 
-import event_handler as eh
+import main_handler
 from arguments import run_args_init
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
@@ -59,19 +59,30 @@ def main():
 	eas.introduce()
 	THREADING_LOCKS["google"] = threading.Lock()
 	THREADING_LOCKS["logging"] = threading.Lock()
-	eh.update_dates(	gcs, eas,
-						datetime.date.today() + datetime.timedelta(days=6))
+	main_handler.update_dates(	gcs, eas,
+							  	datetime.date.today() + datetime.timedelta(days=6))
 
-	threads = gcs.create_execution_threads(google_lock=THREADING_LOCKS["google"], logging_lock=THREADING_LOCKS["logging"])
-	for t_name, t in threads.items():
+	THREADS = {"events": gcs.create_execution_threads(google_lock=THREADING_LOCKS["google"],
+													  logging_lock=THREADING_LOCKS["logging"]),
+			   "meals": {}}
+
+	for t_name, t in THREADS["events"].items():
 		t.start()
 
 	# Do meal inquiry
 
-	while any([t.isAlive() for t_name, t in threads.items()]):
-		for t_name, t in threads.items():
-			t.join(2.0)
-			# if it isn't alive anymore, update meal for that day
+	while any([t.isAlive() for t_name, t in THREADS["events"].items()]):
+		for t_name, t in THREADS["events"].items():
+			t.join(1.0)
+			if t.isAlive():
+				continue
+			meal_thread = THREADS["meals"].get(t_name, None)
+			if meal_thread:
+				meal_thread.start()
+
+	while any([t.isAlive() for t_name, t in THREADS["meals"].items()]):
+		for t_name, t in THREADS["meals"].items():
+			t.join(1.0)
 
 
 if __name__ == '__main__':
