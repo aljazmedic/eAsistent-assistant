@@ -9,7 +9,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from misc import gstrftime, os, datetime, pytz
+from util import gstrftime, os, datetime, pytz
 
 logger = logging.getLogger(__name__)
 

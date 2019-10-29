@@ -6,7 +6,7 @@ import event_handler as eh
 from arguments import run_args_init
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
-from misc import clear_dir, assure_dir, datetime
+from util import clear_dir, assure_dir, datetime
 
 logger = logging.getLogger()
 THREADING_LOCKS = {}

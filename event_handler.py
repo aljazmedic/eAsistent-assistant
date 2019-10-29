@@ -5,7 +5,7 @@ import threading
 
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
-from misc import gstrptime, datetime
+from util import gstrptime, datetime
 
 logger = logging.getLogger(__name__)
 

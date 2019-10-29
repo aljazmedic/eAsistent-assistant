@@ -9,11 +9,11 @@ import logging
 import pytz
 import requests
 import tzlocal
+import dotenv
 
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 logger = logging.logger = logging.getLogger(__name__)
-
 
 
 def ask_for(session, method, url, counter=0, **kwargs):
@@ -30,8 +30,7 @@ def ask_for(session, method, url, counter=0, **kwargs):
 
 def assure_dir(folder):
 	try:
-		if not os.path.exists(folder):
-			os.makedirs(folder)
+		os.makedirs(folder, exist_ok=True)
 	except Exception as e:
 		logger.exception(e)
 
@@ -47,6 +46,8 @@ def clear_dir(folder):
 		except Exception as e:
 			logger.exception(e)
 
+def load_dotenv():
+	dotenv.load_dotenv(os.path.join(os.curdir, ".env"))
 
 def gstrftime(dt, tz_force=None, separated_tz=False):
 	# FORMAT: 2002-10-02T15:00:00Z

@@ -4,7 +4,7 @@ from requests import Session
 
 from account_manager import AccountManager
 from event_formatter import EventFormatter
-from misc import tmp_save, ask_for, datetime
+from util import tmp_save, ask_for, datetime
 import logging
 
 logger = logging.getLogger(__name__)
