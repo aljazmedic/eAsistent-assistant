@@ -113,7 +113,7 @@ class GoogleCalendarService:
 		return self.service.calendars().delete(calendarId=calendar_id).execute()
 
 	def get_events_between(self, time_tuple, **list_args):
-		# type: (Tuple, Dict[str]) -> Dict
+		# type: (Tuple[datetime.date, datetime.date], Dict[str]) -> Dict
 		"""
 		:param time_tuple: time boundary of min and max time
 		:param list_args: q="*", ...
@@ -177,9 +177,10 @@ class GoogleCalendarService:
 				logger.debug("Error removing")
 				logger.error(e)
 
-	def create_execution_threads(self, google_lock, logging_lock):
-		# type: (threading.Lock, threading.Lock) -> Dict
-		ret_list_of_threads = {}
+	def create_execution_threads(self, google_lock, logging_lock, save_to=None):
+		# type: (threading.Lock, threading.Lock, Optional[Dict]) -> Dict
+		if save_to is None:
+			save_to = {}
 
 		# Function that a thread will run
 
@@ -200,10 +201,10 @@ class GoogleCalendarService:
 				logger.info(f"Thread {name} finished.")
 
 		for name_of_queue, queue in self.execution_requests.items():
-			ret_list_of_threads[name_of_queue] = threading.Thread(target=do_function,
+			save_to[name_of_queue] = threading.Thread(target=do_function,
 																  args=(self.execution_requests, name_of_queue, google_lock, logging_lock),
 																  name=f'gcs_t_{name_of_queue[5:]}')
-		return ret_list_of_threads
+		return save_to
 
 
 if __name__ == '__main__':

@@ -14,15 +14,13 @@ logger = logging.getLogger()
 THREADING_LOCKS = {}
 
 
-def main():
-	args_parsed = run_args_init()
+def setup_loggers(args_parsed):
 	uniquestr = datetime.datetime.now().strftime("%d-%b_%H%M%S")
 	logFormatter = logging.Formatter(
 		fmt='%(asctime)-15s - (%(relativeCreated)-8d ms) |%(levelname)-7s| @ [%(threadName)-12.12s] %(name)15.15s - %(message)s',
 		datefmt='%d-%b %H:%M:%S')
 	if args_parsed.verbose:
 		dbg_lvl = logging.DEBUG
-		print("Verbose mode:")
 	elif args_parsed.quiet:
 		dbg_lvl = logging.WARNING
 	else:
@@ -42,6 +40,11 @@ def main():
 	logger.addHandler(consoleHandler)
 	logger.addHandler(fileHandler)
 	logger.debug(str(args_parsed))
+
+
+def main():
+	args_parsed = run_args_init()
+	setup_loggers(args_parsed)
 	CALENDAR_NAME = args_parsed.cal_name
 
 	if args_parsed.prune_temp:
@@ -62,24 +65,26 @@ def main():
 	THREADING_LOCKS["google"] = threading.Lock()
 	THREADING_LOCKS["logging"] = threading.Lock()
 
-	days = [datetime.date.today() + datetime.timedelta(days=6), ]
+	days = [datetime.date.today() + datetime.timedelta(days=6),
+			datetime.date.today() + datetime.timedelta(days=13)]
 
 	main_handler.update_dates(	gcs, eas, *days)
-	eas.meals.update_meals(gcs, *days)
-
-	THREADS = {"events": gcs.create_execution_threads(
+	# eas.meals.update_meals(gcs, *days)
+	THREADS = {
+		"events": {},
+		"meals": {}
+	}
+	gcs.create_execution_threads(
 						google_lock=THREADING_LOCKS["google"],
-						logging_lock=THREADING_LOCKS["logging"]
-						),
-			   "meals": eas.meals.create_execution_threads(
-						logging_lock=THREADING_LOCKS["logging"]
+						logging_lock=THREADING_LOCKS["logging"],
+						save_to=THREADS["events"]
 						)
-			   }
+	eas.meals.create_execution_threads(
+						logging_lock=THREADING_LOCKS["logging"],
+						save_to=THREADS["meals"])
 
 	for t_name, t in THREADS["events"].items():
 		t.start()
-
-	# Do meal inquiry
 
 	while any([t.isAlive() for t_name, t in THREADS["events"].items()]):
 		for t_name, t in THREADS["events"].items():
