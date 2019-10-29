@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import shelve
 import logging, random
-
+from typing import Optional, Union
 logger = logging.getLogger(__name__)
 
 
