@@ -1,6 +1,6 @@
 @echo off
 
-pip install --upgrade pip==19.0.1
-pip install -r requirements.txt
+pip install --upgrade -q pip
+pip install -q -r requirements.txt
 
 python run_service.py %*
