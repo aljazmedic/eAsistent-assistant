@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import shelve
-import logging, random
+import logging
+import random
 from typing import Optional, Union
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class MealPredictorFromDB(MealPredictor):
 		num_chosen = -1
 		while num_chosen < 0 or num_chosen >= len(list_of_options):
 			try:
-				feed_back = input(f"Pick option for {this_data} ({predicted+1}):")
+				feed_back = input(f"Pick option for {this_data} predicted: ({predicted+1}):")
 				if feed_back == "":
 					num_chosen = predicted
 				else:
@@ -47,7 +48,7 @@ class MealPredictorFromDB(MealPredictor):
 		logger.info(f"Chosen number {num_chosen+1} ({list_of_options[num_chosen]['name']}) for date {this_data}.")
 		return list_of_options[num_chosen]
 
-	def _predict(self, list_of_options: list) -> int:
+	def _predict(self, list_of_options: list) -> int:  # TODO Predict :P
 		with shelve.open(self.db_path, writeback=True) as shelve_db:
 			pass
 		return random.randint(0, len(list_of_options) - 1)

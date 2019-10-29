@@ -9,7 +9,8 @@ from pprint import PrettyPrinter
 import meal_prediction
 from google_calendar_connection import GoogleCalendarService
 from time import sleep
-from typing import Union, Dict, List
+import util
+from typing import Union, Dict, List, Optional
 logger = logging.getLogger(__name__)
 logging.getLogger("chardet").setLevel(logging.CRITICAL)
 pp = PrettyPrinter(indent=4)
@@ -57,9 +58,10 @@ class MealConnection:
 			option = self.predictor.select_meal(options)
 			self._pick_meal(option, execution_name=date)
 
-	def create_execution_threads(self, logging_lock):
-		# type: (threading.Lock) -> Dict
-		ret_list_of_threads = {}
+	def create_execution_threads(self, logging_lock, save_to=None):
+		# type: (threading.Lock, Optional[Dict]) -> Dict
+		if save_to is None:
+			save_to = {}
 
 		# Function that a thread will run
 
@@ -89,10 +91,10 @@ class MealConnection:
 				logger.info(f"Thread {name} finished.")
 
 		for name_of_queue, queue in self.execution_requests.items():
-			ret_list_of_threads[name_of_queue] = threading.Thread(target=do_function,
+			save_to[name_of_queue] = threading.Thread(target=do_function,
 																  args=(self.execution_requests, name_of_queue, logging_lock),
 																  name=f'eas_m_{name_of_queue[5:]}')
-		return ret_list_of_threads
+		return save_to
 
 	def update_meals(self, gcs: GoogleCalendarService, *dates: datetime.date):
 
@@ -103,10 +105,14 @@ class MealConnection:
 		4.	Create event
 		5.	Connect it to COLORMAP
 		"""
+		date_data = {}
 
 		school_weeks = set()
 		for d in dates:
 			school_weeks.add(get_school_week(d))
+			event_get_obj = gcs.get_events_between((d, d+datetime.timedelta(days=1)), q="#school", orderBy="startTime", singleEvents=True)
+			delta_time = util.event_time_difference(event_get_obj.get("items", []))
+			date_data[d.isoformat()] = """"asd"""
 		for week_num in school_weeks:
 			self._update_week(week_num)
 
