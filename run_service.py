@@ -61,14 +61,20 @@ def main():
 	eas.introduce()
 	THREADING_LOCKS["google"] = threading.Lock()
 	THREADING_LOCKS["logging"] = threading.Lock()
-	main_handler.update_dates(	gcs, eas,
-							  	datetime.date.today() + datetime.timedelta(days=6))
 
-	eas.meals.update_day(datetime.date.today()+datetime.timedelta(days=7))
+	days = [datetime.date.today() + datetime.timedelta(days=6), ]
 
-	THREADS = {"events": gcs.create_execution_threads(google_lock=THREADING_LOCKS["google"],
-													  logging_lock=THREADING_LOCKS["logging"]),
-			   "meals": {}}
+	main_handler.update_dates(	gcs, eas, *days)
+	eas.meals.update_meals(gcs, *days)
+
+	THREADS = {"events": gcs.create_execution_threads(
+						google_lock=THREADING_LOCKS["google"],
+						logging_lock=THREADING_LOCKS["logging"]
+						),
+			   "meals": eas.meals.create_execution_threads(
+						logging_lock=THREADING_LOCKS["logging"]
+						)
+			   }
 
 	for t_name, t in THREADS["events"].items():
 		t.start()
