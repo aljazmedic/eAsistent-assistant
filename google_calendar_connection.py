@@ -182,22 +182,25 @@ class GoogleCalendarService:
 		# Function that a thread will run
 
 		def do_function(dict_of_queues: dict, name: str, google_lock_: threading.Lock, logging_lock_: threading.Lock):
+			thread_name = f'gcs_t_{name[5:]}'
 			with logging_lock_:
-				logger.info(f"Thread {name} started with {len(dict_of_queues[name])} http requests.")
+				logger.info(f"Thread {thread_name} started with {len(dict_of_queues[name])} http requests.")
 			while len(dict_of_queues[name]) >= 1:
 				try:
 					with google_lock_:
 						dict_of_queues[name].pop(0).execute()
 					sleep(1)
 				except Exception as e:
-					logger.debug(f"Error in executing queue: {name}")
+					logger.debug(f"Error in executing queue: {thread_name}")
 					logger.error(e)
 			del dict_of_queues[name]
 			with logging_lock_:
 				logger.info(f"Thread {name} finished.")
 
 		for name_of_queue, queue in self.execution_requests.items():
-			ret_list_of_threads[name_of_queue] = threading.Thread(target=do_function, args=(self.execution_requests, name_of_queue, google_lock, logging_lock), daemon=True, name=f'gthread_{name_of_queue[5:]}')
+			ret_list_of_threads[name_of_queue] = threading.Thread(target=do_function,
+																  args=(self.execution_requests, name_of_queue, google_lock, logging_lock),
+																  name=f'gcs_t_{name_of_queue[5:]}')
 		return ret_list_of_threads
 
 
