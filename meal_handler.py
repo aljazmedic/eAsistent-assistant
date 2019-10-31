@@ -21,7 +21,10 @@ def parse_meal_from_html(e: BeautifulSoup) -> dict:
 	if len(divs) != 3:
 		# event already passed
 		return {}
-	click_event = divs[2].find('a')['onclick']  # read from onclick function
+	link_event = divs[2].find('a')
+	chosen = link_event.get_text().lower()[:6] == "odjava" # 'odjava' possible only for chosen meals
+
+	click_event = link_event['onclick']  # read from onclick function
 	click_event = click_event.split('(')[1].split(')')[0].split(', ')
 	click_event = [c.replace('"', '').replace("'", '') for c in click_event]  # retrieve arguments for function
 	fields = ['tip_prehrane', 'id_meni', 'datum', 'akcija', 'id_lokacija']
@@ -37,10 +40,11 @@ def parse_meal_from_html(e: BeautifulSoup) -> dict:
 			'sign_on':  signing_on_data,
 			'sign_off': signing_off_data
 		},
-		'datum': signing_on_data['datum'],
-		'id_lokacija': signing_on_data['id_lokacija'],
-		'id_meni': signing_on_data['id_meni'],
-		'tip_prehrane': signing_on_data['tip_prehrane']
+		'date': signing_on_data['datum'],
+		'id_location': signing_on_data['id_lokacija'],
+		'id_menu': signing_on_data['id_meni'],
+		'chosen': chosen,
+		'type_of_meal': signing_on_data['tip_prehrane']
 	}
 	return r_object
 
@@ -159,7 +163,7 @@ class MealConnection:
 				meal_option = parse_meal_from_html(td)
 				if not meal_option:
 					continue
-				datum = meal_option.get("datum")
+				datum = meal_option.get("date")
 				if datum in return_meals:
 					return_meals[datum].append(meal_option)
 				else:

@@ -26,7 +26,7 @@ class MealPredictorFromDB(MealPredictor):
 		return self.manual_select(e)
 
 	def manual_select(self, list_of_options: list) -> dict:
-		this_data = list_of_options[0]['datum']
+		this_data = list_of_options[0]['date']
 		print(f"Options for {this_data}:")
 		for i, meal_option in enumerate(list_of_options, start=1):
 			print("{}.	{}\n	({})".format(i, meal_option["name"], meal_option["description"]))
