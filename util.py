@@ -17,6 +17,14 @@ logger = logging.logger = logging.getLogger(__name__)
 dotenv.set_key(os.path.join(os.curdir, ".env"), key_to_set="SA_DOTENV_DIR", value_to_set=os.path.join(os.curdir, ".env"))
 
 
+def events_start_at_same_time(e1: dict, e2: dict, no_timezone: bool = False) -> bool:
+	s1 = get_event_start(e1)
+	s2 = get_event_start(e2)
+	if no_timezone:
+		s1, s2 = s1[:19], s2[:19]
+	return s1 == s2
+
+
 def get_school_week(dt: datetime.date):
 	first_day = datetime.date(dt.year, 9, 1)
 	while first_day.weekday() >= 5:

@@ -9,14 +9,6 @@ from util import gstrptime, datetime, get_event_start
 logger = logging.getLogger(__name__)
 
 
-def events_start_at_same_time(e1: dict, e2: dict, no_timezone: bool = False) -> bool:
-	s1 = get_event_start(e1)
-	s2 = get_event_start(e2)
-	if no_timezone:
-		s1, s2 = s1[:19], s2[:19]
-	return s1 == s2
-
-
 def _update_single_date(google_cal_service: GoogleCalendarService, date_construct: dict, date: str) -> None:
 	"""
 	:param google_cal_service:
