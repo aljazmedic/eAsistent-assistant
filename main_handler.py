@@ -4,7 +4,7 @@ import logging
 
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
-from util import gstrptime, datetime, get_event_start
+from util import gstrptime, datetime, get_event_start, list_safe_get, events_start_at_same_time
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,6 @@ def _update_single_date(google_cal_service: GoogleCalendarService, date_construc
 	...
 	"""
 
-	def list_safe_get(l: list, idx: int, default=None):
-		try:
-			return l[idx]
-		except IndexError:
-			return default
-
 	for e_time, all_events in date_construct.items():
 		google_events = all_events.get("google", [])
 		easistent_events = all_events.get("easistent", [])
@@ -38,9 +32,17 @@ def _update_single_date(google_cal_service: GoogleCalendarService, date_construc
 			g_ev, ea_ev = list_safe_get(google_events, i), list_safe_get(easistent_events, i)
 
 			if ea_ev and g_ev:
-				# patch google event
-				google_cal_service.update_event(event_id=g_ev["id"], event_body=ea_ev, execution_thread=date)
-				logger.debug(get_event_start(ea_ev) + " Patch queued.")
+				if events_start_at_same_time(ea_ev, g_ev):
+					# patch google event
+					google_cal_service.update_event(event_id=g_ev["id"], event_body=ea_ev, execution_thread=date)
+					logger.debug(get_event_start(ea_ev) + " Patch queued.")
+				else:
+					# create google event from ea_ev
+					google_cal_service.add_event(ea_ev, execution_thread=date)
+					logger.debug(get_event_start(ea_ev) + " Add queued.")
+					# remove google event
+					google_cal_service.remove_event(event_id=g_ev["id"], execution_thread=date)
+					logger.debug(get_event_start(g_ev) + " Remove queued.")
 			elif ea_ev and not g_ev:
 				# create google event from ea_ev
 				google_cal_service.add_event(ea_ev, execution_thread=date)
