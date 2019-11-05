@@ -124,20 +124,20 @@ class MealConnection:
 			prepped = self.session.prepare_request(
 				requests.Request('POST', 'https://www.easistent.com/dijaki/ajax_prehrana_obroki_prijava', data=meal_option["actions"]["sign_on"])
 			)
-
+	
 			if execution_name:
 				if execution_name not in self.execution_requests:
 					self.execution_requests[execution_name] = [(prepped, meal_option)]
 				else:
 					self.execution_requests[execution_name].append((prepped, meal_option))
 
-				logging.info("Queued pick meal: '" + meal_option["name"] + "' for day " + meal_option["datum"])
+				logging.info("Queued pick meal: '" + meal_option["name"] + "' for day " + meal_option["date"])
 			else:
 				response = self.session.send(prepped)
 				response.encoding = 'ISO-8859-1'
 				rsp_json = response.json()
 				if rsp_json["status"].lower() == "ok":
-					logging.info("Picked meal: '" + meal_option["name"] + "' for day " + meal_option["datum"])
+					logging.info("Picked meal: '" + meal_option["name"] + "' for day " + meal_option["date"])
 				else:
 					del rsp_json["data"]
 					logging.exception(rsp_json)
