@@ -9,7 +9,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from util import gstrftime, os, datetime, pytz
+from util import gstrftime, os, datetime, pytz, get_tlock
 
 logger = logging.getLogger(__name__)
 
@@ -177,11 +177,13 @@ class GoogleCalendarService:
 				logger.debug("Error removing")
 				logger.error(e)
 
-	def create_execution_threads(self, google_lock, logging_lock, save_to=None):
-		# type: (threading.Lock, threading.Lock, Optional[Dict]) -> Dict
+	def create_execution_threads(self, save_to=None):
+		# type: (Optional[Dict]) -> Dict
 		if save_to is None:
 			save_to = {}
 
+		google_lock = get_tlock("google")
+		logging_lock = get_tlock("logging")
 		# Function that a thread will run
 
 		def do_function(dict_of_queues: dict, name: str, google_lock_: threading.Lock, logging_lock_: threading.Lock):
