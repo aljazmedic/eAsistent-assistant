@@ -194,7 +194,7 @@ class GoogleCalendarService:
 				try:
 					with google_lock_:
 						dict_of_queues[name].pop(0).execute()
-					sleep(1)
+						sleep(1)
 				except Exception as e:
 					logger.debug(f"Error in executing queue: {thread_name}")
 					logger.error(e)

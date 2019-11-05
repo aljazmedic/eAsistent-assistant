@@ -21,7 +21,7 @@ def parse_meal_from_html(e: BeautifulSoup) -> dict:
 		# event already passed
 		return {}
 	link_event = divs[2].find('a')
-	chosen = link_event.get_text().lower()[:6] == "odjava" # 'odjava' possible only for chosen meals
+	chosen = link_event.get_text().lower()[:6] == "odjava"  # 'odjava' possible only for chosen meals
 
 	click_event = link_event['onclick']  # read from onclick function
 	click_event = click_event.split('(')[1].split(')')[0].split(', ')
@@ -67,9 +67,10 @@ class MealConnection:
 			save_to = {}
 
 		logging_lock = util.get_tlock("logging")
+		easistent_lock = util.get_tlock("easistent")
 		# Function that a thread will run
 
-		def do_function(dict_of_queues: dict, name: str, logging_lock_: threading.Lock):
+		def do_function(dict_of_queues: dict, name: str, logging_lock_: threading.Lock, easistent_lock_: threading.Lock):
 			thread_name = f'eas_m_{name[5:]}'
 			with logging_lock_:
 				logger.info(f"Thread {thread_name} started with {len(dict_of_queues[name])} http requests.")
@@ -77,7 +78,8 @@ class MealConnection:
 			while len(dict_of_queues[name]) >= 1:
 				try:
 					prepped, data = dict_of_queues[name].pop(0)
-					response = self.session.send(prepped)
+					with easistent_lock_:
+						response = self.session.send(prepped)
 
 					response.encoding = 'ISO-8859-1'
 					rsp_json = response.json()
@@ -86,7 +88,8 @@ class MealConnection:
 						with logging_lock_:
 							logging.exception(rsp_json)
 						raise Exception(rsp_json["message"], *rsp_json["errfields"])
-					sleep(1)
+					with easistent_lock_:
+						sleep(0.2)
 				except Exception as e:
 					logger.debug(f"Error in executing queue: {thread_name}")
 					logger.error(e)
@@ -96,7 +99,7 @@ class MealConnection:
 
 		for name_of_queue, queue in self.execution_requests.items():
 			save_to[name_of_queue] = threading.Thread(target=do_function,
-																  args=(self.execution_requests, name_of_queue, logging_lock),
+																  args=(self.execution_requests, name_of_queue, logging_lock, easistent_lock),
 																  name=f'eas_m_{name_of_queue[5:]}')
 		return save_to
 

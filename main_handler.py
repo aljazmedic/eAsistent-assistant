@@ -32,7 +32,7 @@ def _update_single_date(google_cal_service: GoogleCalendarService, date_construc
 			g_ev, ea_ev = list_safe_get(google_events, i), list_safe_get(easistent_events, i)
 
 			if ea_ev and g_ev:
-				if events_start_at_same_time(ea_ev, g_ev):
+				if events_start_at_same_time(ea_ev, g_ev, no_timezone=True):
 					# patch google event
 					google_cal_service.update_event(event_id=g_ev["id"], event_body=ea_ev, execution_thread=date)
 					logger.debug(get_event_start(ea_ev) + " Patch queued.")

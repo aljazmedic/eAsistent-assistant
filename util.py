@@ -18,7 +18,7 @@ DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 logger = logging.logger = logging.getLogger(__name__)
 dotenv.set_key(os.path.join(os.curdir, ".env"), key_to_set="SA_DOTENV_DIR", value_to_set=os.path.join(os.curdir, ".env"))
-
+GETTING_LOCK = threading.Lock()
 THREADING_LOCKS = {}
 
 
@@ -49,9 +49,10 @@ def get_create(d, k, v):
 def get_tlock(name):
 	# type: (str) -> threading.Lock
 	""" Retrieves global threading locks"""
-	if name not in THREADING_LOCKS:
-		THREADING_LOCKS[name] = threading.Lock
-	return THREADING_LOCKS[name]
+	with GETTING_LOCK:
+		if name not in THREADING_LOCKS:
+			THREADING_LOCKS[name] = threading.Lock()
+		return THREADING_LOCKS[name]
 
 
 def get_school_week(dt):
