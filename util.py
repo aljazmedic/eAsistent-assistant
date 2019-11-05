@@ -10,14 +10,20 @@ import pytz
 import requests
 import tzlocal
 import dotenv
-from typing import Union, Optional, Dict, List, Tuple
+import threading
+from typing import Union, Optional, Dict, List, Tuple, Any
+from deprecated import deprecated
+
 DEFAULT_TIMEZONE = "Europe/Belgrade"
 
 logger = logging.logger = logging.getLogger(__name__)
 dotenv.set_key(os.path.join(os.curdir, ".env"), key_to_set="SA_DOTENV_DIR", value_to_set=os.path.join(os.curdir, ".env"))
 
+THREADING_LOCKS = {}
 
-def list_safe_get(l: list, idx: int, default=None):
+
+def list_safe_get(l, idx, default=None):
+	# type: (List, int, Optional[Any]) -> Any
 	try:
 		return l[idx]
 	except IndexError:
@@ -32,7 +38,25 @@ def events_start_at_same_time(e1: dict, e2: dict, no_timezone: bool = False) -> 
 	return s1 == s2
 
 
-def get_school_week(dt: datetime.date):
+def get_create(d, k, v):
+	# type: (Dict, str, Any) -> Any
+	""" Retrieves key, if there was none it creates it and returns it"""
+	if k not in d:
+		d[k] = v
+	return d[k]
+
+
+def get_tlock(name):
+	# type: (str) -> threading.Lock
+	""" Retrieves global threading locks"""
+	if name not in THREADING_LOCKS:
+		THREADING_LOCKS[name] = threading.Lock
+	return THREADING_LOCKS[name]
+
+
+def get_school_week(dt):
+	# type:(datetime.date) -> int
+	""" Retrieves consecutive number of school week"""
 	first_day = datetime.date(dt.year, 9, 1)
 	while first_day.weekday() >= 5:
 		first_day += datetime.timedelta(days=1)
@@ -51,13 +75,6 @@ def ask_for(session, method, url, counter=0, **kwargs):
 	return r
 
 
-def assure_dir(folder):
-	try:
-		os.makedirs(folder, exist_ok=True)
-	except Exception as e:
-		logger.exception(e)
-
-
 def clear_dir(folder):
 	for the_file in os.listdir(folder):
 		file_path = os.path.join(folder, the_file)
@@ -71,12 +88,16 @@ def clear_dir(folder):
 
 
 def load_dotenv():
+	""" Loads dotenv from project wide .env file"""
 	dotenv.load_dotenv(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")))
 
 
-def write_to_dotenv(key: str, value: str):
+def write_to_dotenv(key, value):
+	# type: (str, Any) -> Any
+	""" Saves value to the .env"""
 	dotenv.set_key(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")), key, value)
 	load_dotenv()
+	return value
 
 
 def get_event_start(e: dict) -> str:
