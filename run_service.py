@@ -1,17 +1,16 @@
 import logging
 import os
-import threading, dotenv
+from threading import Thread
 
 import main_handler
 from arguments import run_args_init
 from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
-from util import clear_dir, assure_dir, datetime
+from util import clear_dir, datetime
 from meal_prediction import MealPredictorFromDB
 
 
 logger = logging.getLogger()
-THREADING_LOCKS = {}
 
 
 def setup_loggers(args_parsed):
@@ -25,7 +24,8 @@ def setup_loggers(args_parsed):
 		dbg_lvl = logging.WARNING
 	else:
 		dbg_lvl = logging.INFO
-	assure_dir(args_parsed.log_dir)
+	os.makedirs(args_parsed.log_dir, exist_ok=True)
+
 	fileHandler = logging.FileHandler(os.path.join(args_parsed.log_dir, args_parsed.log_file_name % uniquestr),
 									  mode=args_parsed.log_mode)
 
@@ -61,26 +61,35 @@ def main():
 													   },
 													   remove_if_exists=args_parsed.rm_cal)
 
-	eas.introduce()
-	THREADING_LOCKS["google"] = threading.Lock()
-	THREADING_LOCKS["logging"] = threading.Lock()
-
-	days = [datetime.date.today() + datetime.timedelta(days=6),
-			datetime.date.today() + datetime.timedelta(days=13)]
+	if args_parsed.days:
+		days = set()
+		for delta_days in args_parsed.days:
+			rel_days = {
+				"today": 0,
+				"yesterday": -1,
+				"tomorrow": 1,
+				"next_week": 7
+			}
+			try:
+				delta_days = rel_days.get(delta_days, int(delta_days))
+			except ValueError:
+				logging.warning(f"Unknown day value: {delta_days}!")
+			days.add(datetime.date.today() + datetime.timedelta(days=delta_days))
+	else:
+		days = [datetime.date.today() + datetime.timedelta(days=1*7),
+				datetime.date.today() + datetime.timedelta(days=2*7)]
 
 	main_handler.update_dates(	gcs, eas, *days)
-	# eas.meals.update_meals(gcs, *days)
+	if args_parsed.meals:
+		eas.meals.update_meals(gcs, *days)
 	THREADS = {
 		"events": {},
 		"meals": {}
 	}
 	gcs.create_execution_threads(
-						google_lock=THREADING_LOCKS["google"],
-						logging_lock=THREADING_LOCKS["logging"],
 						save_to=THREADS["events"]
 						)
 	eas.meals.create_execution_threads(
-						logging_lock=THREADING_LOCKS["logging"],
 						save_to=THREADS["meals"])
 
 	for t_name, t in THREADS["events"].items():

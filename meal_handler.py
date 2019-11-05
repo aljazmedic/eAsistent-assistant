@@ -2,10 +2,10 @@ import datetime
 import logging
 
 import requests
-import os, threading
+import os
+import threading
 from util import get_school_week
 from bs4 import BeautifulSoup
-from pprint import PrettyPrinter
 import meal_prediction
 from google_calendar_connection import GoogleCalendarService
 from time import sleep
@@ -13,7 +13,6 @@ import util
 from typing import Union, Dict, List, Optional
 logger = logging.getLogger(__name__)
 logging.getLogger("chardet").setLevel(logging.CRITICAL)
-pp = PrettyPrinter(indent=4)
 
 
 def parse_meal_from_html(e: BeautifulSoup) -> dict:
@@ -62,11 +61,12 @@ class MealConnection:
 			option = self.predictor.select_meal(options)
 			self._pick_meal(option, execution_name=date)
 
-	def create_execution_threads(self, logging_lock, save_to=None):
-		# type: (threading.Lock, Optional[Dict]) -> Dict
+	def create_execution_threads(self, save_to=None):
+		# type: (Optional[Dict]) -> Dict
 		if save_to is None:
 			save_to = {}
 
+		logging_lock = util.get_tlock("logging")
 		# Function that a thread will run
 
 		def do_function(dict_of_queues: dict, name: str, logging_lock_: threading.Lock):
@@ -176,8 +176,10 @@ class MealConnection:
 
 if __name__ == '__main__':
 	from eassistant_connection import EAssistantService
+	from pprint import PrettyPrinter
+	pp = PrettyPrinter(indent=4).pprint
 	logging.basicConfig(level=logging.DEBUG)
 	logger.debug("Testing meal handler")
 	eas = EAssistantService(meal_prediction.MealPredictorFromDB, tuple([os.path.join("temp", "db.db")]))
-	eas.meals._update_day(datetime.date(2019, 9, 30))
-	print(eas.meals.predictor)
+	eas.meals._update_day(datetime.date.today())
+	pp(eas.meals.predictor)
