@@ -47,6 +47,7 @@ def main():
 	if args_parsed.prune_temp:
 		clear_dir("./temp")
 
+
 	eas: EAssistantService = EAssistantService(MealPredictorFromDB, tuple([os.path.join("temp", "db.db")]))
 	gcs: GoogleCalendarService = GoogleCalendarService(CALENDAR_NAME,
 													   {

@@ -1,19 +1,15 @@
 #!/bin/bash
-{
-	# try activating through /venv/scripts/activate
-	source venv/Scripts/activate
-	echo "Using virtualenv"
-} || {
-	workon school_venv
+if workon school_venv; then
 	echo "Using virtualenvwrapper"
-} || {
+elif source venv/Scripts/activate; then
+	echo "Using virtualenv"
+else
 	echo "Using default environment"
-}
+fi
 
 python run_service.py $@
-{
-	deactivate
-} || {
-	echo "Unable to deactivate"
-}
-echo "Done"
+if deactivate; then
+	echo "Unable to deactivate";
+else
+	echo "Done";
+fi

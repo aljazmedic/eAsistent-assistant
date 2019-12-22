@@ -90,6 +90,7 @@ def clear_dir(folder):
 
 def load_dotenv():
 	""" Loads dotenv from project wide .env file"""
+	open(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")), 'a').close()
 	dotenv.load_dotenv(os.getenv("SA_DOTENV_DIR", os.path.join(os.curdir, ".env")))
 
 
