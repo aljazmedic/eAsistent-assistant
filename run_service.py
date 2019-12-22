@@ -8,7 +8,7 @@ from eassistant_connection import EAssistantService
 from google_calendar_connection import GoogleCalendarService
 from util import clear_dir, datetime
 from meal_prediction import MealPredictorFromDB
-
+import assure_packages
 
 logger = logging.getLogger()
 
@@ -18,12 +18,7 @@ def setup_loggers(args_parsed):
 	logFormatter = logging.Formatter(
 		fmt='%(asctime)-15s - (%(relativeCreated)-8d ms) |%(levelname)-7s| @ [%(threadName)-12.12s] %(name)15.15s - %(message)s',
 		datefmt='%d-%b %H:%M:%S')
-	if args_parsed.verbose:
-		dbg_lvl = logging.DEBUG
-	elif args_parsed.quiet:
-		dbg_lvl = logging.WARNING
-	else:
-		dbg_lvl = logging.INFO
+	dbg_lvl = args_parsed.log_level
 	os.makedirs(args_parsed.log_dir, exist_ok=True)
 
 	fileHandler = logging.FileHandler(os.path.join(args_parsed.log_dir, args_parsed.log_file_name % uniquestr),
@@ -45,6 +40,8 @@ def setup_loggers(args_parsed):
 def main():
 	args_parsed = run_args_init()
 	setup_loggers(args_parsed)
+	assure_packages.install_pip("19.3.1", args_parsed.log_level)
+	assure_packages.install_requirements(args_parsed.log_level)
 	CALENDAR_NAME = args_parsed.cal_name
 
 	if args_parsed.prune_temp:

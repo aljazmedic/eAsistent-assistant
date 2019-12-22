@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import argparse
+import logging
 
 
 def run_args_init():
@@ -13,6 +14,6 @@ def run_args_init():
 	parser.add_argument('--days', '-d', nargs='+', help='Relative days', dest="days", default=None, required=False)
 	parser.add_argument('--meals', '-m', help='Configure meals', default=False, action='store_true')
 	dbg_level_group = parser.add_mutually_exclusive_group()
-	dbg_level_group.add_argument('--verbose', '-v', action="store_true", default=False)
-	dbg_level_group.add_argument('--quiet', '-q', action="store_true", default=False)
+	dbg_level_group.add_argument('--verbose', '-v', action="store_const", const=logging.DEBUG, dest="log_level", default=logging.INFO)
+	dbg_level_group.add_argument('--quiet', '-q', action="store_const", const=logging.WARNING, dest="log_level", default=logging.INFO)
 	return parser.parse_args()
