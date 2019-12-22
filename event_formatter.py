@@ -80,6 +80,8 @@ class EventFormatter:
 				"colorId": self.COLORMAP[e["color"]]
 			}
 		elif e["type"] == "event":
+			if e["name"].lower() == "počitnice" or e["name"].lower() == "praznik":
+				return e["name"], None
 			description = [
 				f'Location: {e["location"]}'
 			]
