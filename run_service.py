@@ -39,9 +39,9 @@ def setup_loggers(args_parsed):
 
 def main():
 	args_parsed = run_args_init()
-	setup_loggers(args_parsed)
 	assure_packages.install_pip("19.3.1", args_parsed.log_level)
 	assure_packages.install_requirements(args_parsed.log_level)
+	setup_loggers(args_parsed)
 	CALENDAR_NAME = args_parsed.cal_name
 
 	if args_parsed.prune_temp:
