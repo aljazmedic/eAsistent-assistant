@@ -81,10 +81,9 @@ def update_dates(google_cal_service: GoogleCalendarService, ea_service: EAssista
 		if etime not in EVENTS_BY_DAY[date]:
 			EVENTS_BY_DAY[date][etime] = {}
 		_, f_event = ea_service.ef.google_event_body_from_parsed_event(event)
-		if "easistent" not in EVENTS_BY_DAY[date][etime]:
-			EVENTS_BY_DAY[date][etime]["easistent"] = [f_event]
-		else:
-			EVENTS_BY_DAY[date][etime]["easistent"].append(f_event)
+		if f_event is None:
+			continue
+		EVENTS_BY_DAY[date][etime]["easistent"] = EVENTS_BY_DAY[date][etime].get("easistent", []) + [f_event]
 
 	for g_event in events_google:
 		etime = get_event_start(g_event)

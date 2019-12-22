@@ -50,7 +50,10 @@ class EventFormatter:
 
 	def google_event_body_from_parsed_event(self, e: dict) -> (str, dict):
 		specialty = e.get("special", None)
+
 		if e["type"] == "school_hour":
+			if e.get("special", None) == "cancelled":
+				return specialty, None
 			description = [f'Speciality: {e.get("special", "None")}']
 
 			addition = []
@@ -105,6 +108,11 @@ class EventFormatter:
 			}
 		else:  # e["type"] == "all_day_event"
 			# TODO make sure to connect multiday-events
+
+			# ## Check if you want to add the event to calendar
+			if e["name"].lower() == "počitnice" or e["name"].lower() == "praznik":
+				return e["name"], None
+
 			description = [
 				f'Location: {e["location"]}'
 			]
