@@ -2,7 +2,7 @@ argcomplete==0.8.1
 arrow==0.15.2
 beautifulsoup4==4.8.0
 binaryornot==0.4.4
-bottle==0.12.4
+bottle==0.12.19
 bs4==0.0.1
 cachetools==3.1.1
 certifi==2019.6.16
