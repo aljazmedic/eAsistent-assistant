@@ -11,7 +11,7 @@ Click==7.0
 colorama==0.4.1
 cookiecutter==2.1.1
 entrypoints==0.3
-future==0.17.1
+future==0.18.3
 google==2.0.2
 google-api-python-client==1.7.11
 google-auth==1.6.3
