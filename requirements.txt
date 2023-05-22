@@ -41,7 +41,7 @@ pytest==2.5.2
 python-dateutil==2.8.0
 pytz==2019.2
 PyYAML==5.4
-requests==2.22.0
+requests==2.31.0
 requests-oauthlib==1.2.0
 rsa==4.7
 servicemanager==1.8.1
